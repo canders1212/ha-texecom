@@ -11,7 +11,8 @@ You don't need to write code. The code is maintained with AI coding agents (see 
 | You want to… | Do this |
 |---|---|
 | Say how it went on your panel (worked or not) | [✅ Tested on my panel](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml) |
-| Get something your panel has into Home Assistant (wireless, temperatures, other detectors…) | [💡 Idea](https://github.com/metaljay/ha-texecom/issues/new?template=3-feature.yml), plus the data described [below](#sharing-data-for-a-feature-your-panel-has) |
+| Get something your panel has into Home Assistant (wireless, temperatures, other detectors…) | [📡 Share my panel's data](https://github.com/metaljay/ha-texecom/issues/new?template=3-data.yml): the form asks for what's described [below](#sharing-data-for-a-feature-your-panel-has) |
+| Suggest something it could do | [💡 Idea](https://github.com/metaljay/ha-texecom/issues/new?template=3-feature.yml) |
 | Report something wrong | [🐞 Something's wrong](https://github.com/metaljay/ha-texecom/issues/new?template=2-bug.yml), with diagnostics and a log |
 | Ask a question | [Discussions](https://github.com/metaljay/ha-texecom/discussions) |
 
@@ -25,7 +26,7 @@ You don't need to write code. The code is maintained with AI coding agents (see 
 - **ComIP and ComWiFi** modules, **Elite 48, 64, 88, 168, 640**, older (V4) and newer (V6.06+) **firmware**.
 - **More than one area**, and **Crestron** setups.
 
-**What to send** (each helps; all three is best):
+**What to send** (each helps; all three is best). The [📡 Share my panel's data](https://github.com/metaljay/ha-texecom/issues/new?template=3-data.yml) form has a box for each:
 
 1. **Diagnostics:** the panel's device page → **⋮ → Download diagnostics**. This lists your zones (with the type number the panel reports), areas, power readings and status flags, plus the **last 200 messages the panel sent** and every message the integration didn't recognise. Download it straight after the thing happens, before a restart (the messages are kept in memory only). Codes and the panel's address are removed automatically, and the panel's messages never contain codes.
 2. **A debug log** while the thing happens ([how](#capturing-a-debug-log)).
@@ -55,7 +56,7 @@ Then copy the `custom_components.texecom` lines from **Settings → System → L
 ## Before you post: privacy
 
 - **The integration doesn't write codes to its logs or diagnostics**, so there's nothing to remove there.
-- **Zone and user names, and possibly your panel's local address, can appear in logs.** Change anything you'd rather not share, as long as it stays the same throughout the log (e.g. replace *Smith* with *X* everywhere).
+- **Zone, area and user names appear in diagnostics and logs, and your panel's local address can appear in logs.** Change anything you'd rather not share, as long as it stays the same throughout the log (e.g. replace *Smith* with *X* everywhere).
 - Don't post Wintex files or screenshots that show your name, address or codes.
 
 ## Changing the code
