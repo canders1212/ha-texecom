@@ -19,6 +19,8 @@ from .events import GROUP_TAMPER_ALARM
 
 MAINS_VOLTAGE = 13.3  # below this with no current flowing, the panel is on battery
 BATTERY_ONLY_VOLTAGE = 12.9  # the same, before the panel has ever reported current (mains gives ~13.6 V)
+IMPOSSIBLE_VOLTAGE = 9.0  # below this the panel couldn't be running: a garbled reading, not data
+BATTERY_READINGS = 2  # "on battery" readings in a row before mains counts as off (one alone can be a blip)
 
 # The tamper shown while the panel's internal alarm (area flag 44) is on with
 # nothing reported to explain it. Seen on a real panel: a detector's cover
@@ -51,6 +53,7 @@ class ConditionsMixin:
     panel_zones: int
     _log: HostLog
     _seen_current: bool
+    _battery_readings: int  # "on battery" readings in a row
     _internal_alarms: dict[int, InternalAlarm]
     _internal_alarm_handle: asyncio.TimerHandle | None
     _last_cause_at: float  # when the panel last reported a tamper, a zone alarm or a failed arm
@@ -141,7 +144,13 @@ class ConditionsMixin:
         battery both currents read 0 and the voltage falls below 13 V; with
         mains, ~300 mA flows at ~13.6 V. The panel logs the mains failing at
         once but didn't log it coming back, so this clears (or confirms) it,
-        and gives the right answer after a restart."""
+        and gives the right answer after a restart. A single reading can be
+        wrong (seen: 0 mA at 13.14 V with mains on, fine 30 s later; and
+        false mains-off after comms drops, issue #18), so "on battery" needs
+        two readings in a row, and an impossible voltage is ignored."""
+        if power.panel_voltage < IMPOSSIBLE_VOLTAGE:
+            self._log.debug("Connect: ignoring power reading (%d mA, %.2f V)", power.panel_current, power.panel_voltage)
+            return
         if power.panel_current > 0:
             self._seen_current = True
         # Only trust "no current" from a panel that has reported current
@@ -150,8 +159,9 @@ class ConditionsMixin:
         threshold = MAINS_VOLTAGE if self._seen_current else BATTERY_ONLY_VOLTAGE
         on_battery = power.panel_current == 0 and power.panel_voltage < threshold
         mains_ok = power.panel_current > 0 or power.panel_voltage >= MAINS_VOLTAGE
+        self._battery_readings = self._battery_readings + 1 if on_battery else 0
         faults: set[str] = self.extra.setdefault("faults", set())
-        if on_battery and "AC Fail" not in faults:
+        if self._battery_readings >= BATTERY_READINGS and "AC Fail" not in faults:
             faults.add("AC Fail")
             self._log.warning("Connect: running on battery (no mains current, %.2f V)", power.panel_voltage)
             self.on_event("fault", {"source": "AC Fail", "log_type": None})

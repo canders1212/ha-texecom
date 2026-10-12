@@ -126,6 +126,7 @@ None of these is understood yet, and nothing relies on them. They're candidates 
 
 - **Readings**: volts = 13.7 + (reading − reference) × 0.07; current = reading × 9 mA.
 - **On mains**: about 300 mA (and 18 mA into the battery) at about 13.6 V. **On battery**: both currents read 0, and the voltage falls (13.0 → 12.2 V in 2 minutes once; 13.6 → 12.2 V over 9 minutes, the battery 13.6 → 12.4 V, another time).
+- **A single reading can be wrong:** with mains on, one read gave 0 mA at 13.14 V and the next, 30 s later, 333 mA at 13.63 V (12 Oct 2026, twice in a morning); testers on ComWiFi and ComIP saw false mains-off after comms drops. The integration needs two "on battery" readings in a row (about a minute) and ignores readings below 9 V. The panel's own *AC Fail* log entry still shows at once.
 - The **AC Fail** log arrives at once, but the restore never does, so the driver decides mains is back from the readings (`connect/conditions.py`): within 30 s, as they're taken every 30 s (7 s on 8 Oct 2026). Panels that never report current are only called "on battery" below 12.9 V.
 
 ### Clock

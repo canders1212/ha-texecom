@@ -109,6 +109,7 @@ async def test_alerts(hass, fake, tmp_path):
 
     fake.on_battery = True
     await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
     await wait_for(lambda: len(sent) == 2)
     assert sent[1].data["title"] == "Alarm panel on battery"
     fake.on_battery = False
