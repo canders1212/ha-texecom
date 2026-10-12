@@ -34,8 +34,8 @@ Run one compartment's tests while you work, e.g. `pytest tests/ha/test_flows_opt
 
 | Suite | Where | What it covers |
 |---|---|---|
-| **Driver tests** (69) | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
-| **Home Assistant tests** (77) | `tests/ha/` | Layer 3: the integration running inside a real Home Assistant (setup screens, options, entities, services, events, notifications, the activity list, Repairs, diagnostics, the dashboard, the blueprints), against the same simulated panels |
+| **Driver tests** (71) | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
+| **Home Assistant tests** (89) | `tests/ha/` | Layer 3: the integration running inside a real Home Assistant (setup screens, options, entities, services, events, notifications, the activity list, Repairs, diagnostics, the dashboard, the blueprints), against the same simulated panels |
 
 The Home Assistant tests have one file per module (see [Architecture](architecture.md#tests)). `tests/ha/common.py` holds shared helpers:
 
@@ -102,6 +102,7 @@ echo "lid open" >> fake.in      # then look at fake.log for "ok: lid open"
 - **A screen that talks to the panel** shows a progress screen first: `result = await after_progress(hass, result)` to get the next screen.
 - **A blueprint** → `tests/ha/test_blueprints.py`: `install()` it, `use()` it with inputs, then drive the fake and check the outcome.
 - **Home Assistant behaviour** → the module's file in `tests/ha/`: `entry = await setup_connect(hass, fake)`, act (a service call, a fake event), `wait_for` the state, and finish with `assert await hass.config_entries.async_unload(entry.entry_id)`.
+- **What an entry saves** (data or options), **entity unique IDs** → `tests/ha/test_upgrade.py` holds setups frozen exactly as v0.1.0 saved them, and checks today's code loads them unchanged, with the same IDs. Never edit the frozen sets to make a test pass: a failure there means existing users would break, so add `async_migrate_entry` instead. When a release starts saving something new, add a frozen set for it.
 - Name tests after the behaviour, in plain words: `test_alarm_memory_doesnt_blame_a_zone_for_a_later_alarm`.
 - Prefer a test that fails without your change. Run it before the fix to see it fail.
 
