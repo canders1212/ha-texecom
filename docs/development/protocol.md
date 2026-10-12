@@ -98,6 +98,14 @@ Also learnt from the comparison:
 - **The panel's clock ran about 7 s ahead** of Home Assistant that day (clock sync was off): log timestamps are the panel's clock, not when the message arrived.
 - **In the event log but not yet seen live** (so their type numbers are still to confirm): *Bell Active*, *Alarm Active*, *Alarm Abort*, *Confirmed Intruder*, *Confirmed Alarm*, *Zone nnn Locked Out*, *Remote Command Via Com Port*, *Site Data Changed (via Wintex)*, *Date/Time Changed by Remote PC*, *Manual Test Transmission*, *ARC 1 Test Call via Com-IP Passed*, *ARC ATS Fault*, *Panel Lid Tamper*, *Mains AC Restore*, *Area(s) Part ARMED n by User nn*.
 
+### Walk test
+
+Seen live on 12 Oct 2026 (Premier Elite 24, V6.05.03), a walk test run from the engineer menu, with every zone passing:
+
+- It sits inside engineer programming: log 31 (user 0, areas 3), **58** *Installer Programming Start*, … , **59** *End*, after which the driver re-reads the zones.
+- **Log 74** *User Walk Test*: **group 13** when it starts (parameter 0, areas 3), **group 15** the first time each zone is seen (parameter = the zone; later sightings aren't logged), **group 14** when it ends.
+- **Area flag 33** *Walk Test* is set for the whole test (and cleared at its end). Zone messages are the usual active/secure ones; the *failed test* bit (3) stayed clear.
+
 ### Zone types
 
 The type number the panel reports (zone details, and the type of a zone's alarm log entry) is the position in Wintex's *Zone Type* list, confirmed on a Premier Elite 24 (V6.05.03):
