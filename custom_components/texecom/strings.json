@@ -353,6 +353,10 @@
     "panel_offline": {
       "title": "Can't reach {name}",
       "description": "Home Assistant hasn't been able to connect to the alarm panel at **{address}** for {minutes} minutes ({error}).\n\nCheck that the SmartCom (or adapter) is powered and on the network, and that its address hasn't changed: reserve it in your router. If it moved, use **Reconfigure** on the Texecom integration. Also check nothing else is connected to it (the Texecom app, Homebridge, texecom2mqtt).\n\nThis notice clears itself once the panel is back. [What to check]({help})"
+    },
+    "unrecognised_messages": {
+      "title": "Your alarm panel said something new: would you share it?",
+      "description": "{name} has sent {count} kind(s) of message this integration doesn't recognise yet (for example *{example}*). That usually means a detector, module or firmware the developers haven't been able to test, and your panel can help add support for it.\n\nEverything else keeps working as before. If you'd like to help: on the panel's device page choose **⋮ → Download diagnostics**, then select **Learn more** to share it (the form says what else helps). Codes and the panel's address are removed from the download, and nothing is sent anywhere unless you post it.\n\nNot interested? Select **Ignore**: it won't ask again."
     }
   }
 }
