@@ -1,17 +1,22 @@
 """Fake Texecom Connect panel (Premier Elite 24, one area or more) for tests and demos.
 
     python3 tests/fake_connect_panel.py [port] [--demo] [--two-areas] [--clock-reset] [--commands]
+                                        [--from DIAGNOSTICS.json]
 
 --demo uses friendlier zone names (for screenshots) and wanders a few zones
 between active and secure. --two-areas puts the Garage in a second area,
 GARAGE. --clock-reset starts its clock at 31 Oct 2023. --commands reads
 commands from standard input (see COMMANDS below), so a test Home Assistant
 can be shown tampers, mains failures, keypad users and alarms.
+--from becomes the panel in a diagnostics file someone shared (its model,
+firmware, zones, areas and their states); the command "replay" then sends
+the messages that panel sent, in order.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import random
 import struct
 import sys
@@ -53,6 +58,29 @@ def with_garage_area(zones: list[tuple]) -> list[tuple]:
 
 def zone_areas(zone: tuple) -> int:
     return zone[3] if len(zone) > 3 else 1
+
+
+def load_diagnostics(path: str | Path) -> dict:
+    """The "panel" part of a diagnostics file (Home Assistant's download puts
+    the integration's report under "data")."""
+    report = json.loads(Path(path).read_text(encoding="utf-8"))
+    return report.get("data", report)["panel"]
+
+
+# Home Assistant's area states, as the panel's (index into P.AREA_STATES)
+AREA_STATE_INDEX = {
+    "disarmed": 0,
+    "arming": 1,
+    "pending": 2,
+    "armed_away": 3,
+    "armed_home": 4,
+    "armed_night": 4,
+    "triggered": 5,
+}
+
+
+def area_bitmap(areas: list[int]) -> int:
+    return sum(1 << (a - 1) for a in areas) or 1
 
 
 USER_COUNT = 24
@@ -118,6 +146,44 @@ class FakeConnectPanel:
         # GET_USER: {number: (name, code)} for users 1-24; the others are empty.
         # The codes are fakes, used to check that Home Assistant never keeps or logs one.
         self.users: dict[int, tuple[str, str]] = dict(FAKE_USERS)
+        self.recorded: list[dict] = []  # messages from a diagnostics file, for replay()
+        self.tasks: set[asyncio.Task] = set()  # replays running (asyncio holds tasks weakly)
+
+    @classmethod
+    def from_diagnostics(cls, panel: dict, **kwargs) -> FakeConnectPanel:
+        """The panel a diagnostics file describes (see load_diagnostics): its
+        identity, zones (name, type, areas) and areas, with the states they
+        were in when the file was downloaded."""
+        zones = [(z["number"], z["name"], z["panel_type"] or 0, area_bitmap(z["areas"])) for z in panel["zones"]]
+        fake = cls(zones=zones, areas={a["number"]: a["name"] for a in panel["areas"]}, **kwargs)
+        info = panel["info"]
+        fake.ident = f"Elite {info['zones']} {info['firmware']}".encode("latin1")
+        for z in panel["zones"]:
+            fake.zone_state[z["number"]] = P.ZONE_STATES.index(z["state"])
+        for a in panel["areas"]:
+            fake.area_states[a["number"]] = AREA_STATE_INDEX.get(a["state"], 0)
+            fake.part_arms[a["number"]] = a.get("part_arm")
+        fake.recorded = panel.get("recent_messages", [])
+        return fake
+
+    async def replay(self, messages: list[dict] | None = None, speed: float = 1, longest: float = 5) -> int:
+        """Sends recorded messages (a diagnostics file's "recent_messages")
+        again, with their original gaps divided by speed (0: all at once) and
+        no gap longer than longest seconds. Returns how many were sent."""
+        messages = self.recorded if messages is None else messages
+        previous = None
+        for m in messages:
+            at = datetime.fromisoformat(m["at"])
+            if speed and previous:
+                await asyncio.sleep(min((at - previous).total_seconds() / speed, longest))
+            previous = at
+            body = bytes.fromhex(m["raw"])
+            if len(body) >= 3 and body[0] == P.MSG_ZONE:
+                self.zone_state[body[1]] = body[2]
+            elif len(body) >= 3 and body[0] == P.MSG_AREA and body[1] in self.area_states:
+                self.area_states[body[1]] = body[2]
+            self.send(body)
+        return len(messages)
 
     async def start(self, port: int = 0, host: str = "127.0.0.1") -> int:
         self.server = await asyncio.start_server(self._on_client, host, port)
@@ -387,7 +453,9 @@ COMMANDS = """Commands, one per line:
                                      away for N seconds, as a SmartCom reporting the alarm (about 120)
   refuse arm|disarm                  say no to the next arm or disarm from Home Assistant
   log TYPE GROUP PARAMETER [AREAS]   any event-log entry
-  display TEXT                       the keypads show TEXT (up to 32 characters); display alone: the usual"""
+  display TEXT                       the keypads show TEXT (up to 32 characters); display alone: the usual
+  replay [SPEED]                     send the messages from --from's file again (SPEED times as fast;
+                                     0: all at once; gaps over 5 s are cut to 5 s)"""
 
 ZONE_BITS = {"open": 0x01, "closed": 0x00, "tamper": 0x02, "alarm": 0x11}
 AREA_STATES = {"off": 0, "exit": 1, "entry": 2, "armed": 3, "alarm": 5}
@@ -432,6 +500,11 @@ def run_command(panel: FakeConnectPanel, line: str) -> str:
                 panel.nak_next[P.CMD_ARM_AREA if what == "arm" else P.CMD_DISARM_AREA] = 1
             case ["display", *_]:
                 panel.display = line.strip().split(maxsplit=1)[1] if len(words) > 1 else None
+            case ["replay", *speed] if len(speed) <= 1:
+                task = asyncio.get_running_loop().create_task(panel.replay(speed=float(speed[0]) if speed else 1))
+                panel.tasks.add(task)
+                task.add_done_callback(panel.tasks.discard)
+                return f"ok: replaying {len(panel.recorded)} messages"
             case ["log", log_type, group, parameter, *areas] if len(areas) <= 1:
                 panel.send_log(int(log_type), int(group), int(parameter), *(int(a) for a in areas))
             case _:
@@ -454,11 +527,16 @@ async def _main() -> None:
     demo = "--demo" in sys.argv
     zones = DEMO_ZONES if demo else TEST_ZONES
     two = "--two-areas" in sys.argv
-    panel = FakeConnectPanel(
-        zones=with_garage_area(zones) if two else zones,
-        areas=TWO_AREAS if two else None,
-        exit_delay=15 if demo else 2,
-    )
+    if "--from" in sys.argv:
+        panel = FakeConnectPanel.from_diagnostics(
+            load_diagnostics(sys.argv[sys.argv.index("--from") + 1]), exit_delay=2
+        )
+    else:
+        panel = FakeConnectPanel(
+            zones=with_garage_area(zones) if two else zones,
+            areas=TWO_AREAS if two else None,
+            exit_delay=15 if demo else 2,
+        )
     if "--clock-reset" in sys.argv:  # as after a full power-down: 31 Oct 2023
         panel.clock_offset = datetime(2023, 10, 31, 12, 0) - datetime.now()
     await panel.start(port, "0.0.0.0")

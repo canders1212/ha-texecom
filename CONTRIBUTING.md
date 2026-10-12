@@ -58,6 +58,7 @@ Then copy the `custom_components.texecom` lines from **Settings → System → L
 - **The integration doesn't write codes to its logs or diagnostics**, so there's nothing to remove there.
 - **Zone, area and user names appear in diagnostics and logs, and your panel's local address can appear in logs.** Change anything you'd rather not share, as long as it stays the same throughout the log (e.g. replace *Smith* with *X* everywhere).
 - Don't post Wintex files or screenshots that show your name, address or codes.
+- **With your permission**, a diagnostics file you post may be added to the tests, with names changed, so a simulated copy of your panel checks every future change. We'll always ask first.
 
 ## Changing the code
 
