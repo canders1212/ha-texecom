@@ -1106,3 +1106,28 @@ async def test_a_drop_after_an_alarm_says_why(fake, caplog):
         await wait_for(lambda: panel.connected, timeout=5)
     finally:
         await panel.stop()
+
+
+async def test_diagnostics_keep_the_recent_messages_and_the_unrecognised_ones(fake):
+    # For panels, modules and devices we haven't seen: the user shares one file.
+    panel = await make_panel(fake)
+    try:
+        fake.set_area(3)
+        fake.send_log(250, 1, 7)  # a log type nobody has named
+        fake.send_log(250, 1, 8)
+        fake.send(bytes([9, 1, 2, 3]))  # a message kind nobody knows
+        await wait_for(lambda: len(panel.capture.unrecognised) == 2)
+        diagnostics = await panel.async_diagnostics()
+        recent = [m["read"] for m in diagnostics["recent_messages"]]
+        assert "area: area 1, state_code 3, state armed" in recent
+        assert diagnostics["recent_messages"][-1]["raw"] == "09 01 02 03"
+        unrecognised = diagnostics["unrecognised_messages"]
+        assert unrecognised["log type 250, group 1"]["count"] == 2
+        assert unrecognised["log type 250, group 1"]["first"]["read"].startswith("log: unknown (250)")
+        assert unrecognised["unknown message 09"]["count"] == 1
+        # It keeps only so many.
+        for _ in range(250):
+            panel.capture.add(P.decode_message(bytes([P.MSG_ZONE, 1, 0])))
+        assert len(panel.capture.recent) == 200
+    finally:
+        await panel.stop()
