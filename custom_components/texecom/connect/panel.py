@@ -109,6 +109,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._switching: dict[int, float] = {}  # area -> end of a mode switch's grace
         self._switch_disarmed: set[int] = set()  # areas whose switch has had its "disarmed"
         self._seen_current = False
+        self._battery_readings = 0
         self._idle_count = 0
         self._refresh_handle: asyncio.TimerHandle | None = None
         self._ready_handle: asyncio.TimerHandle | None = None
@@ -216,6 +217,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
             finally:
                 await client.close()
                 self.set_connected(False)
+                self._battery_readings = 0  # a reading from a dropped session doesn't count towards mains off
             if self._stopped:
                 break
             self._log.debug("Connect: reconnecting in %.0f s", delay)
