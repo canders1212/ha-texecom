@@ -75,6 +75,8 @@ Then look in **Settings → System → Logs** (**Show raw logs**) for lines with
 
 Questions rather than bugs: [Discussions](https://github.com/metaljay/ha-texecom/discussions).
 
+Your panel has something Home Assistant doesn't show yet (wireless detectors, temperatures, other modules)? See [Helping improve it](../../CONTRIBUTING.md) for what to share.
+
 ## Known limits
 
 What the panel does and doesn't tell Home Assistant, found by testing on a real Premier Elite 24 (V6.05.03):
