@@ -18,6 +18,7 @@ from .client import HostLog
 # Log event types the driver reacts to (numbering as in texecom2mqtt).
 LOG_AUTO_OPEN_CLOSE = 39
 LOG_INSTALLER_PROGRAMMING_END = 59
+LOG_DOWNLOAD_END = 54  # a Wintex (UDL) session ended: it may have changed zones or areas
 LOG_ARM_FAILED = 85
 PART_ARM_FROM_LOG = {78: 1, 79: 2, 80: 3, 204: 1, 205: 2, 206: 3, 207: 1, 208: 2, 209: 3}
 GROUP_PRIORITY_ALARM_RESTORE = 2
@@ -159,8 +160,9 @@ class EventsMixin:
                     {"areas": m["areas"], "zone": m["parameter"], "zone_name": zone.name if zone else None},
                 )
             self._refresh_areas_soon()  # these produce no area event
-        elif m["type"] == LOG_INSTALLER_PROGRAMMING_END:
-            self._log.info("Connect: engineer programming finished; re-reading zones and areas")
+        elif m["type"] in (LOG_INSTALLER_PROGRAMMING_END, LOG_DOWNLOAD_END):
+            how = "engineer programming" if m["type"] == LOG_INSTALLER_PROGRAMMING_END else "a Wintex session"
+            self._log.info("Connect: %s finished; re-reading zones and areas", how)
             self._spawn(self._rediscover())
 
     def _credit_alarm_zone(self, number: int) -> None:

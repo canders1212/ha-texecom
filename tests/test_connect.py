@@ -1193,3 +1193,20 @@ async def test_a_shared_diagnostics_file_replays_to_the_same_picture(path):
     finally:
         await panel.stop()
         await fake.close()
+
+
+@pytest.mark.parametrize(("log_type", "how"), [(59, "engineer programming at a keypad"), (54, "a Wintex session")])
+async def test_zones_are_read_again_after_the_panel_is_reprogrammed(fake, log_type, how):
+    # After either, a zone may have a new name, type or area: read them again.
+    panel = await make_panel(fake)
+    changed = []
+    panel.on_layout_changed = lambda info, zones, areas: changed.append(zones)
+    try:
+        fake.zone_list = [(4, "Garage", 3, 2) if z[0] == 4 else z for z in fake.zone_list]
+        fake.area_names[2] = "GARAGE"
+        fake.area_states[2], fake.part_arms[2] = 0, None
+        fake.send_log(log_type, 9, 3, areas=1)  # e.g. Download End, over Com Port 3
+        await wait_for(lambda: changed)
+        assert next(z for z in changed[0] if z.number == 4).areas == [2], how
+    finally:
+        await panel.stop()
