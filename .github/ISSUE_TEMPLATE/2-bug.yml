@@ -33,11 +33,5 @@ body:
     attributes:
       label: Log
       description: |
-        For detail, add this to `configuration.yaml`, restart, reproduce the problem, then copy the `custom_components.texecom` lines from *Settings → System → Logs*:
-        ```yaml
-        logger:
-          logs:
-            custom_components.texecom: debug
-        ```
-        Please check the log for anything private before posting.
+        **Settings → Devices & services → Texecom Premier Elite → ⋮ → Enable debug logging**, make the problem happen, then **⋮ → Disable debug logging**: your browser downloads the log. Paste the `custom_components.texecom` lines here. Please check it for anything private before posting.
       render: text
