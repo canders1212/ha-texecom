@@ -117,6 +117,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._internal_alarms: dict[int, InternalAlarm] = {}  # area -> its internal alarm flag (conditions.py)
         self._internal_alarm_handle: asyncio.TimerHandle | None = None
         self._rediscover_handle: asyncio.TimerHandle | None = None  # events.py
+        self._rediscover_pending = False  # a re-read failed: try again once logged in (discovery.py)
         self._display_handle: asyncio.TimerHandle | None = None
         self._display_soon_at = float("-inf")  # when the keypad was last read for _read_display_soon
         self._alarm_at = float("-inf")  # when an area was last in alarm
@@ -187,6 +188,8 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
                 delay = self.reconnect_min
                 warned = False
                 self.set_connected(True)
+                if self._rediscover_pending:
+                    self._spawn(self._rediscover())
                 sync_task = None
                 if self.time_sync_seconds > 0:
                     sync_task = asyncio.get_running_loop().create_task(self._time_sync_loop())

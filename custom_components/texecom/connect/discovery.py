@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 
 from ..panel import PanelArea, PanelError, PanelInfo, PanelZone
 from .client import ConnectClient, ConnectError, HostLog, LoginRejected, Unreachable
@@ -23,9 +23,15 @@ def default_area_name(number: int) -> str:
     return f"Area {chr(64 + number)}" if number <= 26 else f"Area {number}"
 
 
-async def discover(client: ConnectClient) -> tuple[PanelInfo, list[PanelZone], list[PanelArea]]:
+async def discover(
+    client: ConnectClient, known: Collection[int] = ()
+) -> tuple[PanelInfo, list[PanelZone], list[PanelArea]]:
     """Reads panel identity, zones in use (name, type, areas) and the areas
-    that contain them (like texecom2mqtt, empty areas are left out)."""
+    that contain them (like texecom2mqtt, empty areas are left out).
+
+    A zone in known (when reading them again) whose details the panel refuses
+    or garbles raises ConnectError: only "not used" takes a zone away, never
+    a busy panel (Wintex connected, say)."""
     ident = await client.panel_identification()
     if not ident.zones:
         raise ConnectError(f"unrecognised panel identification {ident.text!r}")
@@ -33,6 +39,8 @@ async def discover(client: ConnectClient) -> tuple[PanelInfo, list[PanelZone], l
     zones: list[PanelZone] = []
     for number in range(1, ident.zones + 1):
         details = await client.zone_details(number)
+        if not details and number in known:
+            raise ConnectError(f"zone {number}'s details couldn't be read")
         if not details or details.type == 0:
             continue  # not used
         zones.append(PanelZone(number, details.name or f"Zone {number}", details.type, details.areas))
@@ -83,13 +91,14 @@ class RediscoveryMixin:
     areas: dict[int, PanelArea]
     on_layout_changed: Callable[[PanelInfo, list[PanelZone], list[PanelArea]], None] | None
     _log: HostLog
+    _rediscover_pending: bool
 
     async def async_rediscover(self) -> tuple[PanelInfo, list[PanelZone], list[PanelArea]]:
         """Reads zones and areas again over the open session (a SmartCom
         allows only one, so a separate login would fail). Raises PanelError."""
         client = self._ready_client()
         try:
-            return await discover(client)
+            return await discover(client, self.zones)
         except ConnectError as err:
             raise PanelError(f"couldn't read the panel: {err}") from err
 
@@ -118,13 +127,21 @@ class RediscoveryMixin:
         if not self.client:
             return
         try:
-            info, zones, areas = await discover(self.client)
+            info, zones, areas = await discover(self.client, self.zones)
         except ConnectError as err:
-            self._log.warning("Connect: re-reading zones failed: %s", err)
+            # E.g. Wintex still busy with the panel (seen to end the session): try again once logged in.
+            self._log.warning("Connect: re-reading zones failed (%s); trying again after reconnecting", err)
+            self._rediscover_pending = True
             return
+        self._rediscover_pending = False
 
         def layout(zs, ars):
             return ([(z.number, z.name, z.panel_type, z.areas) for z in zs], [(a.number, a.name) for a in ars])
 
-        if layout(zones, areas) != layout(self.zones.values(), self.areas.values()) and self.on_layout_changed:
-            self.on_layout_changed(info, zones, areas)
+        new = layout(zones, areas)
+        if new == layout(self.zones.values(), self.areas.values()):
+            self._log.debug("Connect: zones and areas unchanged: %s", new)
+        else:
+            self._log.info("Connect: zones and areas changed: %s", new)
+            if self.on_layout_changed:
+                self.on_layout_changed(info, zones, areas)
