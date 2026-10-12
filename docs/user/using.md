@@ -61,7 +61,7 @@ Open **Settings → Devices & services → Texecom → ⚙️ Configure**, and p
 | **Names for keypad users** | One per line, like `3 = Sam`: the alarm then says *changed by Sam* instead of *User 3*, here and in the activity list. With a SmartCom or ComIP, tick *Fill in the names stored in the panel* to start from the names your installer gave (the engineer code, user 0, is filled in as *Engineer*). The panel sends each user's code with the name; Home Assistant drops the codes at once, without keeping or logging them |
 | **Notifications** | Whether Home Assistant shows a notification while the panel has no mains power, or while a tamper is open (both on to start with) |
 | **Panel clock** | **Keep the panel clock right**: once a day (and on connecting), sets the panel's clock if it's more than a minute out, in Home Assistant's time zone (so British Summer Time is handled). *Reconnects to the panel* |
-| **Read zones and areas from the panel again** | After your installer adds or renames zones. It happens by itself when engineer programming ends, too |
+| **Read zones and areas from the panel again** | After your installer adds or renames zones. It happens by itself when engineer programming at a keypad or a Wintex session ends, too (Texecom Connect) |
 | **Create or refresh the Alarm dashboard** | Builds the dashboard again from the current zones (it asks first, because any changes you made to it are replaced) |
 
 <img src="../images/keypad-names.png" width="420" alt="Names for keypad users: one per line, such as 3 = Sam, with the option to fill in the names stored in the panel">
