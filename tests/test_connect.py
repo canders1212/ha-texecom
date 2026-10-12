@@ -1220,3 +1220,28 @@ async def test_zones_are_read_again_after_the_panel_is_reprogrammed(fake, log_ty
         assert len(changed) == 1
     finally:
         await panel.stop()
+
+
+async def test_a_refused_zone_read_never_drops_a_zone(fake, monkeypatch):
+    # A busy panel (Wintex connected) can refuse a read. During a re-read that must
+    # not look like a zone taken out of use: give up, and try again after reconnecting.
+    from custom_components.texecom.connect import events
+
+    monkeypatch.setattr(events, "REDISCOVER_DELAY", 0.05)
+    panel = await make_panel(fake)
+    changed = []
+    panel.on_layout_changed = lambda info, zones, areas: changed.append(zones)
+    try:
+        fake.zone_list = [(4, "Garage", 3, 2) if z[0] == 4 else z for z in fake.zone_list]
+        fake.area_names[2] = "GARAGE"
+        fake.area_states[2], fake.part_arms[2] = 0, None
+        fake.nak_next[P.CMD_GET_ZONE_DETAILS] = 1  # zone 1 refused
+        fake.send_log(100, 9, 1)  # Site Data Changed
+        await wait_for(lambda: panel._rediscover_pending)
+        assert changed == []
+        fake.drop_all()  # the next login reads them again
+        await wait_for(lambda: changed, timeout=5)
+        assert [(z.number, z.areas) for z in changed[0]] == [(1, [1]), (2, [1]), (3, [1]), (4, [2]), (5, [1])]
+        assert not panel._rediscover_pending
+    finally:
+        await panel.stop()
