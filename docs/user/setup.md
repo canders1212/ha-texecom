@@ -69,7 +69,7 @@ Your area (named by your installer, e.g. *House*) is now **the alarm**: a device
 ## 5. Finish off
 
 - 🏷️ **Rooms.** Zones whose names match a room you already have go in that room by themselves: a zone called *Kitchen* or *Kitchen PIR* goes in *Kitchen*, and *Lounge* goes in *Living Room* if that room has *Lounge* as an alias. Put the others in a room from their device page.
-- 🔁 **How a zone shows.** Doors, windows, smoke and gas are worked out from the zone's name and type; everything else shows as motion. To change one, open it and use **⚙️ Settings → Show as**.
+- 🔁 **How a zone shows.** Doors (and anything named "contact"), windows, smoke and gas are worked out from the zone's name and type (the panel can't tell a door contact from a motion detector, so the name is the only clue); everything else shows as motion. To change one, open it and use **⚙️ Settings → Show as**.
 - 🍏 **Apple Home**: see [Apple Home](apple-home.md).
 - ⚡ **Arm automatically when everyone leaves**, and other ideas: see [Automations](automations.md).
 
