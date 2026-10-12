@@ -55,7 +55,9 @@ Just after an alarm, a drop is normal: the SmartCom closes the connection to rep
 
 ## Getting more detail
 
-For a detailed log, add this to `configuration.yaml` and restart Home Assistant:
+For a detailed log, the easy way: **Settings → Devices & services → Texecom Premier Elite → ⋮ → Enable debug logging**, make the problem happen, then **⋮ → Disable debug logging**, and your browser downloads the log.
+
+To capture start-up too, add this to `configuration.yaml` and restart Home Assistant instead:
 
 ```yaml
 logger:
@@ -75,7 +77,7 @@ Then look in **Settings → System → Logs** (**Show raw logs**) for lines with
 
 Questions rather than bugs: [Discussions](https://github.com/metaljay/ha-texecom/discussions).
 
-Your panel has something Home Assistant doesn't show yet (wireless detectors, temperatures, other modules)? See [Helping improve it](../../CONTRIBUTING.md) for what to share.
+Your panel has something Home Assistant doesn't show yet (wireless detectors, temperatures, other modules)? [Share your panel's data](https://github.com/metaljay/ha-texecom/issues/new?template=3-data.yml) (the form says what helps), or see [Helping improve it](../../CONTRIBUTING.md).
 
 ## Known limits
 

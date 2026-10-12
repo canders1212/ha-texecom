@@ -14,3 +14,9 @@ body:
     attributes:
       label: Your panel and connection
       placeholder: e.g. Premier Elite 48 with a ComIP
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics (if it's about something your panel has)
+      description: |
+        On the panel's device page, choose **⋮ → Download diagnostics** and drag the file here. Codes and the panel's address are removed automatically. For a detector or module Home Assistant doesn't show yet, the [📡 Share my panel's data](https://github.com/metaljay/ha-texecom/issues/new?template=3-data.yml) form asks for everything that helps.

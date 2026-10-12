@@ -1,0 +1,52 @@
+name: "📡 Share my panel's data"
+description: Your panel has a detector, module or feature Home Assistant doesn't show yet. Send what it says, and we'll work out the rest.
+title: "Data: "
+labels: ["panel data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! This is how support for new detectors and modules gets added: we only have wired PIRs on one Elite 24, so **your panel can show us things ours can't**. You don't need to know anything about the protocol.
+        Please finish the title with what it's about, e.g. *Data: Ricochet door contact battery*.
+  - type: input
+    id: what
+    attributes:
+      label: What is it about?
+      description: The detector, module or feature, and what you'd like to see in Home Assistant.
+      placeholder: e.g. Ricochet PIR battery level, shown in the Texecom app
+    validations:
+      required: true
+  - type: input
+    id: panel
+    attributes:
+      label: Your panel, firmware and connection
+      description: All on the panel's device page in Home Assistant, or in the diagnostics.
+      placeholder: e.g. Premier Elite 48, V6.06.03, ComIP
+    validations:
+      required: true
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      description: |
+        What you did and when (to the second if you can), and what the **Texecom app or keypad** showed at the same moment. This is how messages get matched to meanings. Screenshots of the app are welcome (check them for anything private).
+      value: |
+        14:02:10 opened the Studio door
+        14:02:40 the app showed "Studio Shock 21 °C"
+        14:03:05 closed it
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        **Straight after** the timeline (before any restart: the panel's messages are kept in memory only), open the panel's device page and choose **⋮ → Download diagnostics**, then drag the file here. Codes and the panel's address are removed automatically.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log (optional, but very useful)
+      description: |
+        Before you start: **Settings → Devices & services → Texecom Premier Elite → ⋮ → Enable debug logging**. Do the timeline, then **⋮ → Disable debug logging**: your browser downloads the log. Drag it here (zip it if it's large). For wireless detectors, leaving it on for an hour catches their regular check-in.
