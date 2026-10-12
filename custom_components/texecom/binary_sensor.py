@@ -23,14 +23,18 @@ ZONE_TYPE_GAS = 11
 ZONE_TYPES_PANIC = (7, 8, 20, 21)
 ZONE_TYPE_TAMPER = 13
 
-_OPENING = re.compile(r"\b(door|gate|shutter|patio)\b", re.IGNORECASE)
+_OPENING = re.compile(r"\b(door|gate|shutter|patio|contact)\b", re.IGNORECASE)
 _WINDOW = re.compile(r"\b(window|windows)\b", re.IGNORECASE)
 _GARAGE_DOOR = re.compile(r"\bgarage door\b", re.IGNORECASE)
 _SHOCK = re.compile(r"\b(shock|vibration)\b", re.IGNORECASE)
 
 
+_CAMEL_JOIN = re.compile(r"(?<=[a-z])(?=[A-Z])")
+
+
 def guess_device_class(name: str, panel_type: int | None) -> BinarySensorDeviceClass:
     """A sensible default; users can change it under the entity's "Show as"."""
+    name = _CAMEL_JOIN.sub(" ", name)  # "DoorContact" -> "Door Contact" ("Indoor" stays one word)
     if panel_type == ZONE_TYPE_FIRE:
         return BinarySensorDeviceClass.SMOKE
     if panel_type == ZONE_TYPE_GAS:
