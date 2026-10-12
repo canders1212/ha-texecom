@@ -64,14 +64,56 @@ The protocol follows Joseph Heenan's [texecom-connect](https://github.com/davidM
 |---|---|---|
 | 1–21 | Zone events: an alarm (group 3), tamper alarm (group 11) or fire alarm (raw group 129) names the zone | `connect/events.py` |
 | 39 | Auto open/close | `connect/events.py` (re-reads the areas) |
-| 47 | AC Fail (mains). **The restore is never logged** | `connect/conditions.py` |
+| 47 | AC Fail (mains). **The restore is logged late, or not at all**: on 8 Oct 2026 two AC alarms (08:46:22, 08:51:23) were followed by *Mains AC Restore* only at 08:55:17; on 7 Oct an AC alarm (14:19:31) had no restore in the log at all. The driver takes the restore from the power readings instead | `connect/conditions.py` |
 | 48, 50–52, 65, 66, 96, 97, 99, 101, 104, 105, 107–109, 118, 119, 122 | Faults: Low Battery, Mains Over Voltage, Telephone Line Fault, Fail to Communicate, Expander/Keypad Trouble, Supervision Fault, RF Low Battery, Radio Jamming, Zone Fault, Zone Masked, PSU faults… | `connect/conditions.py`, names in `protocol.py` (`FAULT_LOG_NAMES`) |
-| 59 | Installer (engineer) programming ended: the driver re-reads zones and areas | `connect/events.py` |
+| 59, 54 | Installer (engineer) programming ended at a keypad (59), or a Wintex session ended (54 *Download End*): the driver re-reads zones and areas, which either may have changed | `connect/events.py` |
 | 60 | **Panel Box Tamper** (the lid): group 11 open, 12 closed | `connect/conditions.py` |
 | 62 | **Auxiliary Tamper**: every detector's tamper on one shared circuit (both PIR types tested), so nothing can say which detector. Group 11 (marked *communicated*) when a cover opens, 12 when it's closed. **Not always logged**: on 8 Oct 2026 the third opening that day (10:45, after two at 08:40 and 08:42) sent no group 11 at all, although the keypad showed `AUX 0,0 Tamper` and the internal sounder went off; only the group 12 came, when the cover closed. A limit on repeated alarms ("swinger" count)? The driver falls back on area flag 44 ([below](#area-flags)) | `connect/conditions.py` |
 | 61, 63, 64, 67, 68, 70, 110, 121 | Other tampers: bell, expander, keypad, fire zone, zone, code tamper, PSU, GSM | `connect/conditions.py`, names in `protocol.py` (`TAMPER_LOG_NAMES`) |
 | 78–80, 204–209 | Part Arm 1–3 (says which part arm a "part armed" area message means) | `connect/events.py` |
 | 85 | **Arm failed**: one entry per zone still active at the end of the exit time; the keypad shows *Area arm fail* | `connect/events.py` |
+
+### Matched against the panel's own event log
+
+On 12 Oct 2026 the panel's event log (460 entries, read in Wintex) was matched, to the second, with what the driver had received live during the tests of 8 Oct and that day. Every live log message had the same meaning as the Wintex entry at that time, and the names in `protocol.py` agree. What the parameters and groups mean there:
+
+| Type, group | Wintex shows | Parameter |
+|---|---|---|
+| 31, 0 | *System Access by User nn* | The user (0 the engineer, whose areas are A and B: bitmap 3) |
+| 32, 16 / 32, 17 | *Exit Started* / *Exit Stopped* (groups 16 and 17 mean started and stopped here, not *Armed* and *Tested*) | Where: **0** a remote arm (Home Assistant), **11** the keypad *Net 1 – Rkp 1*. The log also shows *Net 2 – Rkp 1* once (presumably 21) |
+| 33, 5 / 33, 6 | *Exit Error – Arming Failed Alarm* / *… Restore* | 0 |
+| 34, 18 | *Entry started by Zone nnn* | The zone |
+| 37, 5 | *Area(s) DISARMED* (by a user at the keypad) | The user |
+| 42, 6 / 42, 5 | *Area(s) Remote ARMED* / *Remote DISARMED* | 0 |
+| 53, 9 | *Download Start* (Wintex connecting) | 3: Wintex came in through Com Port 3 (the Crestron port, through a serial-to-network adapter), so probably the port |
+| 58, 9 / 59, 9 | *Installer Programming Start* / *End* | 0 |
+| 62, 11 / 62, 12 | *Auxiliary Tamper Alarm / Restore from Control Panel* | 0 |
+| 85, 0 | *Zone nnn Arm Failed* | The zone |
+| 106, 0 | *Faults Overridden* | 0 |
+
+Also learnt from the comparison:
+
+- **Home Assistant logging in doesn't write to the event log.** Its many logins over the SmartCom left no *Download Start* (53); only Wintex did.
+- **The event log can miss what was sent live.** An alarm on 8 Oct (entry by zone 1, the Kitchen in alarm, disarmed by user 3, panel time 14:30:50–14:30:58) arrived over Connect as log types 34, 31, 3, 37 and 3 (restore) but isn't in the event log at all. Don't treat the event log as complete.
+- **The panel's clock ran about 7 s ahead** of Home Assistant that day (clock sync was off): log timestamps are the panel's clock, not when the message arrived.
+- **In the event log but not yet seen live** (so their type numbers are still to confirm): *Bell Active*, *Alarm Active*, *Alarm Abort*, *Confirmed Intruder*, *Confirmed Alarm*, *Zone nnn Locked Out*, *Remote Command Via Com Port*, *Site Data Changed (via Wintex)*, *Date/Time Changed by Remote PC*, *Manual Test Transmission*, *ARC 1 Test Call via Com-IP Passed*, *ARC ATS Fault*, *Panel Lid Tamper*, *Mains AC Restore*, *Area(s) Part ARMED n by User nn*.
+
+### Zone types
+
+The type number the panel reports (zone details, and the type of a zone's alarm log entry) is the position in Wintex's *Zone Type* list, confirmed on a Premier Elite 24 (V6.05.03):
+
+| No. | Type | No. | Type | No. | Type |
+|---|---|---|---|---|---|
+| 0 | Not used | 8 | PA Silent | 16 | Latch Key |
+| 1 | Entry/Exit 1 | 9 | Fire | 17 | Security |
+| 2 | Entry/Exit 2 | 10 | Medical | 18 | Omit Key |
+| 3 | Guard | 11 | 24hr Gas | 19 | Custom |
+| 4 | Guard Access | 12 | Auxiliary | 20 | Conf PA Audible |
+| 5 | 24hr Audible | 13 | Tamper | 21 | Conf PA Silent |
+| 6 | 24hr Silent | 14 | Exit Terminator | | |
+| 7 | PA Audible | 15 | Moment Key | | |
+
+`binary_sensor.py` uses 9 (smoke), 11 (gas), 7, 8, 20, 21 (panic) and 13 (tamper). The type says nothing about the detector (a door contact and a PIR can both be *Guard*), hence the name-based guesses.
 
 ### Area flags
 
@@ -180,7 +222,7 @@ Things to find out on real panels (each is a task in the [live test plan](../tes
 - What the **system flags** (command 10) mean beyond the [first clues](#system-flags), and which **area flags** show tampers and faults that are already there when Home Assistant connects (D11–D13).
 - Why the panel sometimes **doesn't log a tamper** (a limit on repeats?), and what else sets area flag 44 *Internal Alarm* while disarmed (chime, walk test, the fail-to-set warning, a 24-hour zone).
 - Whether **Ready** (flag 16) is set exactly when the area can be armed, and what it shows while armed.
-- Whether Home Assistant's own login writes **Download Start** (log 53) to the panel's log, before log 53/54 (remote access) and 58 (engineer programming) are shown in the activity list.
+- The type numbers of the event-log entries [not yet seen live](#matched-against-the-panels-own-event-log), and what log 53's parameter means with a SmartCom or ComIP.
 - The exact **refusal window** after a session closes, and what affects it.
 - Why the SmartCom waited for the disarm before reporting an alarm (and dropping the session), and whether that depends on how the panel is set to report alarms.
 - The SmartCom's **network name (DHCP hostname)**, which could let Home Assistant discover it automatically.
