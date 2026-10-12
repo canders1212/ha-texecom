@@ -11,8 +11,9 @@ from typing import Any
 
 from . import protocol as P
 
-RECENT = 200  # messages kept, newest last
+RECENT = 1000  # messages kept, newest last
 UNRECOGNISED = 50  # different unrecognised messages kept (each with a count)
+KINDS = 100  # different kinds of message kept (each with a count), so rare ones outlast RECENT
 
 
 def describe(m: dict[str, Any]) -> str:
@@ -38,10 +39,38 @@ def unrecognised(m: dict[str, Any]) -> str | None:
     return None
 
 
+def kind(m: dict[str, Any]) -> str:
+    """The kind of message, finer than its type (the key it's counted under
+    in message_kinds): a wireless detector's hourly check-in, say, stays
+    listed after it has dropped out of the recent messages."""
+    match m["kind"]:
+        case "zone":
+            return f"zone bits {m['raw'].split()[-1]}"
+        case "area":
+            return f"area state {m['state_code']}"
+        case "log":
+            return f"log type {m['type']}, group {m['group']}"
+        case "output":
+            return f"output location {m['location']}"
+        case "user":
+            return f"user method {m['method']}"
+        case other:
+            return f"{other} message {m['raw'][:2]}"
+
+
+def _tally(table: dict[str, dict[str, Any]], key: str, entry: dict[str, str], limit: int) -> None:
+    if key in table:
+        table[key]["count"] += 1
+        table[key]["last"] = entry
+    elif len(table) < limit:
+        table[key] = {"count": 1, "first": entry, "last": entry}
+
+
 class Capture:
     def __init__(self) -> None:
         self.recent: deque[dict[str, str]] = deque(maxlen=RECENT)
         self.unrecognised: dict[str, dict[str, Any]] = {}
+        self.kinds: dict[str, dict[str, Any]] = {}
 
     def add(self, m: dict[str, Any]) -> None:
         entry = {
@@ -50,17 +79,13 @@ class Capture:
             "read": describe(m),
         }
         self.recent.append(entry)
-        key = unrecognised(m)
-        if key is None:
-            return
-        if key in self.unrecognised:
-            self.unrecognised[key]["count"] += 1
-            self.unrecognised[key]["last"] = entry
-        elif len(self.unrecognised) < UNRECOGNISED:
-            self.unrecognised[key] = {"count": 1, "first": entry, "last": entry}
+        _tally(self.kinds, kind(m), entry, KINDS)
+        if (key := unrecognised(m)) is not None:
+            _tally(self.unrecognised, key, entry, UNRECOGNISED)
 
     def diagnostics(self) -> dict[str, Any]:
         return {
             "unrecognised_messages": self.unrecognised,
+            "message_kinds": dict(sorted(self.kinds.items())),
             "recent_messages": list(self.recent),
         }

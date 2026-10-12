@@ -11,6 +11,7 @@ import _paths  # noqa: F401
 import pytest
 from fake_connect_panel import FAKE_USERS, FakeConnectPanel, user_record
 
+from custom_components.texecom.connect import capture
 from custom_components.texecom.connect import protocol as P
 from custom_components.texecom.connect.client import ConnectClient, LoginRejected, PanelBusyError, Timing
 from custom_components.texecom.connect.discovery import probe
@@ -1148,9 +1149,18 @@ async def test_diagnostics_keep_the_recent_messages_and_the_unrecognised_ones(fa
         assert unrecognised["log type 250, group 1"]["count"] == 2
         assert unrecognised["log type 250, group 1"]["first"]["read"].startswith("log: unknown (250)")
         assert unrecognised["unknown message 09"]["count"] == 1
-        # It keeps only so many.
-        for _ in range(250):
+        # Every kind of message, known or not, with a count and its first and last.
+        kinds = diagnostics["message_kinds"]
+        assert kinds["area state 3"]["count"] == 1
+        assert kinds["log type 250, group 1"]["count"] == 2
+        assert kinds["log type 250, group 1"]["first"] != kinds["log type 250, group 1"]["last"]
+        # It keeps only so many messages, but a rare kind stays listed after it has scrolled out.
+        for _ in range(capture.RECENT + 50):
             panel.capture.add(P.decode_message(bytes([P.MSG_ZONE, 1, 0])))
-        assert len(panel.capture.recent) == 200
+        assert len(panel.capture.recent) == capture.RECENT
+        assert all(m["read"].startswith("zone") for m in panel.capture.recent)
+        diagnostics = await panel.async_diagnostics()
+        assert diagnostics["message_kinds"]["unknown message 09"]["count"] == 1
+        assert diagnostics["message_kinds"]["zone bits 00"]["count"] >= capture.RECENT + 50
     finally:
         await panel.stop()
