@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import _paths  # noqa: F401
 import pytest
-from fake_connect_panel import FAKE_USERS, FakeConnectPanel, user_record
+from fake_connect_panel import FAKE_USERS, FakeConnectPanel, load_diagnostics, user_record
 
 from custom_components.texecom.connect import protocol as P
 from custom_components.texecom.connect.client import ConnectClient, LoginRejected, PanelBusyError, Timing
@@ -1154,3 +1155,31 @@ async def test_diagnostics_keep_the_recent_messages_and_the_unrecognised_ones(fa
         assert len(panel.capture.recent) == 200
     finally:
         await panel.stop()
+
+
+SHARED = sorted((Path(__file__).parent / "diagnostics").glob("*.json"))
+
+
+@pytest.mark.parametrize("path", SHARED, ids=[p.stem for p in SHARED])
+async def test_a_shared_diagnostics_file_replays_to_the_same_picture(path):
+    # Each diagnostics file in tests/diagnostics (shared by a user, made anonymous)
+    # becomes a simulated panel: same zones and areas, and the same messages sent again.
+    shared = load_diagnostics(path)
+    fake = FakeConnectPanel.from_diagnostics(shared)
+    await fake.start()
+    panel = await make_panel(fake)
+    try:
+        assert (panel.info.zones, panel.info.firmware) == (shared["info"]["zones"], shared["info"]["firmware"])
+        assert [(z.number, z.name, z.panel_type, z.areas) for z in panel.zones.values()] == [
+            (z["number"], z["name"], z["panel_type"], z["areas"]) for z in shared["zones"]
+        ]
+        assert {a.number: a.name for a in panel.areas.values()} == {a["number"]: a["name"] for a in shared["areas"]}
+        sent = await fake.replay(speed=0)
+        await wait_for(lambda: len(panel.capture.recent) >= sent)
+        assert [m["raw"] for m in list(panel.capture.recent)[-sent:]] == [m["raw"] for m in shared["recent_messages"]]
+        await asyncio.sleep(0.2)
+        assert {z.number: z.state for z in panel.zones.values()} == {z["number"]: z["state"] for z in shared["zones"]}
+        assert {a.number: a.state for a in panel.areas.values()} == {a["number"]: a["state"] for a in shared["areas"]}
+    finally:
+        await panel.stop()
+        await fake.close()
