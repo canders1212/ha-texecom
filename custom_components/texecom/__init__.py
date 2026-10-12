@@ -20,7 +20,7 @@ from .const import CONF_CREATE_DASHBOARD, CONF_TIME_SYNC, DOMAIN, DRIVER_OPTIONS
 from .dashboard import async_create_dashboard
 from .entity import panel_device_info
 from .factory import create_panel
-from .issues import clear_clock_issue, watch_connection
+from .issues import clear_clock_issue, watch_connection, watch_unrecognised
 from .notifications import dismiss_when_armed, watch_conditions
 from .panel import TexecomPanel
 
@@ -38,6 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> b
     if entry.options.get(CONF_TIME_SYNC):
         clear_clock_issue(hass, entry)
     entry.async_on_unload(watch_connection(hass, entry, panel))
+    entry.async_on_unload(watch_unrecognised(hass, entry, panel))
     entry.async_on_unload(dismiss_when_armed(hass, entry, panel))
     entry.async_on_unload(watch_conditions(hass, entry, panel))
     if entry.data.get(CONF_CREATE_DASHBOARD):

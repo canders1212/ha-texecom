@@ -41,6 +41,10 @@ If the panel loses all power (mains and battery), its clock resets (on one panel
 
 Home Assistant checks the clock when it connects. If it's more than 5 minutes out, **Settings → Repairs** shows *"Your alarm panel's clock is wrong"*. Click it, then **Submit**: this turns on **Keep the panel clock right**, which sets the clock now and checks it once a day, using Home Assistant's time zone.
 
+## "Your alarm panel said something new"
+
+This notice in **Settings → Repairs** means the panel sent a message the integration doesn't recognise yet. That's usually a detector, module or firmware nobody has been able to test. Nothing is wrong, and everything else keeps working. To help add support for it, download the diagnostics and select **Learn more** to share them; or select **Ignore** and it won't ask again. Texecom Connect only.
+
 ## The panel is unreachable
 
 If Home Assistant can't reach the panel for 15 minutes, **Settings → Repairs** says so, with the address it's trying and the last error. It clears itself once the panel is back.
