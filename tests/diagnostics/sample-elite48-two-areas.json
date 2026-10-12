@@ -1,0 +1,217 @@
+{
+  "home_assistant": {
+    "version": "2026.10.1"
+  },
+  "integration_manifest": {
+    "domain": "texecom",
+    "version": "0.2.5"
+  },
+  "data": {
+    "entry": {
+      "data": {
+        "protocol": "connect",
+        "host": "**REDACTED**",
+        "port": 10001,
+        "udl": "**REDACTED**"
+      },
+      "options": {}
+    },
+    "panel": {
+      "connected": true,
+      "info": {
+        "model": "Premier Elite",
+        "zones": 48,
+        "firmware": "V6.06.03LS1"
+      },
+      "part_arms": {
+        "home": 0,
+        "night": 1
+      },
+      "areas": [
+        {
+          "number": 1,
+          "name": "HOUSE",
+          "state": "disarmed",
+          "part_arm": null,
+          "changed_by": null,
+          "known": true,
+          "ready": true
+        },
+        {
+          "number": 2,
+          "name": "GARAGE",
+          "state": "armed_away",
+          "part_arm": null,
+          "changed_by": null,
+          "known": true,
+          "ready": true
+        }
+      ],
+      "zones": [
+        {
+          "number": 1,
+          "name": "Front Door",
+          "panel_type": 1,
+          "areas": [
+            1
+          ],
+          "state": "secure",
+          "bypassed": false,
+          "known": true
+        },
+        {
+          "number": 2,
+          "name": "Hall",
+          "panel_type": 3,
+          "areas": [
+            1
+          ],
+          "state": "secure",
+          "bypassed": false,
+          "known": true
+        },
+        {
+          "number": 3,
+          "name": "Kitchen Smoke",
+          "panel_type": 9,
+          "areas": [
+            1
+          ],
+          "state": "secure",
+          "bypassed": false,
+          "known": true
+        },
+        {
+          "number": 4,
+          "name": "Garage Door",
+          "panel_type": 4,
+          "areas": [
+            2
+          ],
+          "state": "active",
+          "bypassed": false,
+          "known": true
+        },
+        {
+          "number": 5,
+          "name": "Shed Shock",
+          "panel_type": 3,
+          "areas": [
+            2
+          ],
+          "state": "secure",
+          "bypassed": false,
+          "known": true
+        }
+      ],
+      "protocol": "connect",
+      "single_flag_reads": false,
+      "last_error": null,
+      "power": {
+        "panel_voltage": 13.77,
+        "battery_voltage": 13.63,
+        "panel_current": 270,
+        "battery_current": 18
+      },
+      "display": "Premier Elite",
+      "faults": [],
+      "tampers": [],
+      "area_flags": {
+        "1": [
+          "16 Ready"
+        ],
+        "2": [
+          "16 Ready"
+        ]
+      },
+      "unrecognised_messages": {
+        "log type 250, group 1": {
+          "count": 2,
+          "first": {
+            "at": "2026-10-12 11:35:11",
+            "raw": "05 fa 01 05 02 cb a8 8b 69",
+            "read": "log: unknown (250), group Priority Alarm (1), parameter 5, areas 0x2"
+          },
+          "last": {
+            "at": "2026-10-12 11:35:16",
+            "raw": "05 fa 01 05 02 d0 a8 8b 69",
+            "read": "log: unknown (250), group Priority Alarm (1), parameter 5, areas 0x2"
+          }
+        },
+        "unknown message 09": {
+          "count": 1,
+          "first": {
+            "at": "2026-10-12 11:35:12",
+            "raw": "09 01 02 03",
+            "read": "unknown"
+          },
+          "last": {
+            "at": "2026-10-12 11:35:12",
+            "raw": "09 01 02 03",
+            "read": "unknown"
+          }
+        }
+      },
+      "recent_messages": [
+        {
+          "at": "2026-10-12 11:35:07",
+          "raw": "01 01 01",
+          "read": "zone: zone 1, state ZoneState(raw=1, state='active', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:08",
+          "raw": "01 02 01",
+          "read": "zone: zone 2, state ZoneState(raw=1, state='active', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:09",
+          "raw": "01 01 00",
+          "read": "zone: zone 1, state ZoneState(raw=0, state='secure', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:10",
+          "raw": "01 02 00",
+          "read": "zone: zone 2, state ZoneState(raw=0, state='secure', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:11",
+          "raw": "05 fa 01 05 02 cb a8 8b 69",
+          "read": "log: unknown (250), group Priority Alarm (1), parameter 5, areas 0x2"
+        },
+        {
+          "at": "2026-10-12 11:35:12",
+          "raw": "09 01 02 03",
+          "read": "unknown"
+        },
+        {
+          "at": "2026-10-12 11:35:14",
+          "raw": "02 02 03",
+          "read": "area: area 2, state_code 3, state armed"
+        },
+        {
+          "at": "2026-10-12 11:35:15",
+          "raw": "01 05 01",
+          "read": "zone: zone 5, state ZoneState(raw=1, state='active', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:16",
+          "raw": "05 fa 01 05 02 d0 a8 8b 69",
+          "read": "log: unknown (250), group Priority Alarm (1), parameter 5, areas 0x2"
+        },
+        {
+          "at": "2026-10-12 11:35:17",
+          "raw": "01 05 00",
+          "read": "zone: zone 5, state ZoneState(raw=0, state='secure', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        },
+        {
+          "at": "2026-10-12 11:35:18",
+          "raw": "01 04 01",
+          "read": "zone: zone 4, state ZoneState(raw=1, state='active', fault=False, failed_test=False, alarmed=False, manual_bypass=False, auto_bypass=False, masked=False)"
+        }
+      ],
+      "system_flags": "00 00 00 00 00 00 00 00",
+      "panel_clock": "2026-10-12 11:35:19",
+      "panel_clock_drift_s": 0
+    }
+  }
+}

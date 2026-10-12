@@ -34,7 +34,7 @@ Run one compartment's tests while you work, e.g. `pytest tests/ha/test_flows_opt
 
 | Suite | Where | What it covers |
 |---|---|---|
-| **Driver tests** (71) | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
+| **Driver tests** (72) | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
 | **Home Assistant tests** (89) | `tests/ha/` | Layer 3: the integration running inside a real Home Assistant (setup screens, options, entities, services, events, notifications, the activity list, Repairs, diagnostics, the dashboard, the blueprints), against the same simulated panels |
 
 The Home Assistant tests have one file per module (see [Architecture](architecture.md#tests)). `tests/ha/common.py` holds shared helpers:
@@ -93,6 +93,25 @@ touch fake.in
 tail -n0 -f fake.in | python tests/fake_connect_panel.py 10001 --demo --commands > fake.log 2>&1 &
 echo "lid open" >> fake.in      # then look at fake.log for "ok: lid open"
 ```
+
+### Someone else's panel, from their diagnostics
+
+A diagnostics file a user shares can become the simulated panel: their model, firmware, zones (names, types, areas), areas and the states they were in. The command `replay` then sends the messages their panel sent (the last 200), in order:
+
+```bash
+python tests/fake_connect_panel.py 10001 --from their-diagnostics.json --commands
+echo "replay" >> fake.in        # real time; "replay 10" ten times as fast, "replay 0" all at once
+```
+
+Gaps longer than 5 seconds are cut to 5. In a test, use `FakeConnectPanel.from_diagnostics(load_diagnostics(path))` and `await fake.replay(speed=0)`.
+
+**Every file in `tests/diagnostics/` is a test** (`test_a_shared_diagnostics_file_replays_to_the_same_picture`): the driver must read the same zones and areas, receive the same messages, and end with the same zone and area states. It checks that the driver still handles that panel the way it did when the file was made, so a change can't quietly break a panel we don't own. It doesn't prove the panel's messages are understood correctly: that still needs a timeline from the owner. To add one:
+
+1. Ask the person first (their issue or thread), and only use a file they posted publicly.
+2. Make it anonymous: replace zone, area and user names that say anything about them (*Smith's Room* → *Bedroom 2*) in the `zones` and `areas` lists **and** in the `read` text of the messages. Keep the `raw` bytes as they are (they carry no names or codes), and check that the address and codes still read `**REDACTED**`.
+3. Name it after the panel, e.g. `elite24-v6.06-comwifi.json`, and run the driver tests.
+
+`sample-elite48-two-areas.json` is made up (by this driver against the simulated panel), as an example.
 
 **`FakeCrestronPort`** (in `tests/test_crestron.py`) answers like a COM port set to Crestron: `send(line)` sends a line (e.g. `'"Z0021'`), `armed` sets the ASTATUS answer, `login_ok=False` / `text_error=True` mimic a panel that ignores the UDL login and refuses text commands.
 
