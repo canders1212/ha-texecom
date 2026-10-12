@@ -28,7 +28,7 @@ You don't need to write code. The code is maintained with AI coding agents (see 
 
 **What to send** (each helps; all three is best). The [📡 Share my panel's data](https://github.com/metaljay/ha-texecom/issues/new?template=3-data.yml) form has a box for each:
 
-1. **Diagnostics:** the panel's device page → **⋮ → Download diagnostics**. This lists your zones (with the type number the panel reports), areas, power readings and status flags, plus the **last 200 messages the panel sent** and every message the integration didn't recognise. Download it straight after the thing happens, before a restart (the messages are kept in memory only). Codes and the panel's address are removed automatically, and the panel's messages never contain codes.
+1. **Diagnostics:** the panel's device page → **⋮ → Download diagnostics**. This lists your zones (with the type number the panel reports), areas, power readings and status flags, plus the **last 1,000 messages the panel sent**, every kind of message it has sent since Home Assistant connected (with a count, so rare ones such as a wireless detector's hourly check-in stay listed), and every message the integration didn't recognise. Download it straight after the thing happens, before a restart (the messages are kept in memory only). Codes and the panel's address are removed automatically, and the panel's messages never contain codes.
 2. **A debug log** while the thing happens ([how](#capturing-a-debug-log)).
 3. **A timeline:** what you did and when, to the second if you can, plus what the **Texecom app or keypad** showed at the same moment. For example:
    > 14:02:10 opened the Studio door · 14:02:40 app showed *Studio Shock 21 °C* · 14:03:05 closed it

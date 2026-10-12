@@ -27,4 +27,5 @@ async def test_diagnostics_hide_codes_and_address(hass, fake):
     # The panel's recent messages (capture.py): none unrecognised from the simulated panel.
     assert isinstance(diag["panel"]["recent_messages"], list)
     assert diag["panel"]["unrecognised_messages"] == {}
+    assert isinstance(diag["panel"]["message_kinds"], dict)
     assert await hass.config_entries.async_unload(entry.entry_id)
