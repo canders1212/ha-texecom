@@ -1,5 +1,6 @@
-"""Repairs notices: the panel clock is wrong (fixable, see repairs.py), and
-the panel has been unreachable for a while."""
+"""Repairs notices: the panel clock is wrong (fixable, see repairs.py), the
+panel has been unreachable for a while, and the panel sent messages the
+integration doesn't recognise (an invitation to share them)."""
 
 from __future__ import annotations
 
@@ -13,10 +14,11 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import CLOCK_DRIFT_LIMIT, CONF_SERIAL_DEVICE, DOMAIN, HELP_OFFLINE
+from .const import CLOCK_DRIFT_LIMIT, CONF_SERIAL_DEVICE, DOMAIN, HELP_OFFLINE, SHARE_DATA_URL
 from .panel import TexecomPanel
 
 OFFLINE_ISSUE_AFTER = 15 * 60  # seconds without a connection before Repairs says so
+UNRECOGNISED_CHECK = timedelta(minutes=10)
 
 
 def describe_drift(drift: int | None) -> str:
@@ -104,3 +106,37 @@ def watch_connection(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
         ir.async_delete_issue(hass, DOMAIN, issue_id)
 
     return remove
+
+
+def watch_unrecognised(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPanel):
+    """Asks once, in Repairs, for the diagnostics when the panel has sent
+    messages the integration doesn't recognise (connect/capture.py): usually
+    a detector, module or firmware nobody has been able to test. Never
+    deleted while running, so a notice the user ignores stays ignored; after
+    a restart it only comes back if such messages arrive again."""
+    capture = getattr(panel, "capture", None)
+    if capture is None:  # Crestron: its few line formats are all known
+        return lambda: None
+    issue_id = f"unrecognised_messages_{entry.entry_id}"
+
+    @callback
+    def check(_now=None) -> None:
+        if not capture.unrecognised:
+            return
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            learn_more_url=SHARE_DATA_URL,
+            translation_key="unrecognised_messages",
+            translation_placeholders={
+                "name": entry.title,
+                "count": str(len(capture.unrecognised)),
+                "example": next(iter(capture.unrecognised)),
+            },
+        )
+
+    return async_track_time_interval(hass, check, UNRECOGNISED_CHECK)
