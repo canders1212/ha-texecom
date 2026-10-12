@@ -54,6 +54,8 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 | Use a COM port set to Crestron instead of a SmartCom | [Crestron](https://github.com/metaljay/ha-texecom/blob/main/docs/user/crestron.md) |
 | Move over from Homebridge or texecom2mqtt | [Coming from Homebridge](https://github.com/metaljay/ha-texecom/blob/main/docs/user/setup.md#coming-from-homebridge-or-texecom2mqtt) |
 
+**Have a panel, module or detector that isn't covered yet?** [Help improve it](https://github.com/metaljay/ha-texecom/blob/main/CONTRIBUTING.md): your diagnostics and logs are how new features get added.
+
 **Something wrong?** [Report a bug](https://github.com/metaljay/ha-texecom/issues/new?template=2-bug.yml) · **Questions?** [Discussions](https://github.com/metaljay/ha-texecom/discussions)
 
 ## 🧑‍💻 Working on the code
