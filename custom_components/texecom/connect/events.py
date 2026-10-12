@@ -12,6 +12,7 @@ from typing import Any
 
 from ..panel import DISARMED, TRIGGERED, PanelArea, PanelZone, nice_name
 from . import protocol as P
+from .capture import Capture
 from .client import HostLog
 
 # Log event types the driver reacts to (numbering as in texecom2mqtt).
@@ -48,6 +49,7 @@ class EventsMixin:
     areas: dict[int, PanelArea]
     on_event: Callable[[str, dict[str, Any]], None]
     _log: HostLog
+    capture: Capture
     _last_part_arm: int | None
     _last_user: Credit | None
     _recent_alarms: dict[tuple[int, bool], float]
@@ -67,6 +69,7 @@ class EventsMixin:
         return None
 
     def _on_message(self, m: dict[str, Any]) -> None:
+        self.capture.add(m)
         if m["kind"] == "log":
             self._log.debug("Connect: message %s: %s", m, P.describe_log(m))
         else:

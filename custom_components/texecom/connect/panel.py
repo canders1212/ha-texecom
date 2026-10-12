@@ -31,6 +31,7 @@ from ..panel import (
     TexecomPanel,
 )
 from . import protocol as P
+from .capture import Capture
 from .client import ConnectClient, ConnectError, HostLog, LoginRejected, PanelBusyError, Timing
 from .clock import ClockMixin
 from .conditions import ConditionsMixin, InternalAlarm
@@ -120,6 +121,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._disarmed_at: dict[int, float] = {}  # area -> when the panel last announced its disarm
         self._last_cause_at = float("-inf")  # when a tamper, zone alarm or failed arm was last reported
         self.last_error: str | None = None
+        self.capture = Capture()  # the panel's recent messages, for diagnostics (capture.py)
 
     @property
     def panel_zones(self) -> int:
@@ -496,4 +498,5 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
             }
             if self.client and self.client.last_area_flags
             else None,
+            **self.capture.diagnostics(),
         }
