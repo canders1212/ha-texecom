@@ -69,7 +69,6 @@ class EventsMixin:
         return None
 
     def _on_message(self, m: dict[str, Any]) -> None:
-        self.capture.add(m)
         if m["kind"] == "log":
             self._log.debug("Connect: message %s: %s", m, P.describe_log(m))
         else:
@@ -106,6 +105,7 @@ class EventsMixin:
                 self._refresh_areas_soon()  # a code silences the internal alarm (conditions.py)
         elif kind == "log":
             self._on_log(m)
+        self.capture.add(m)  # afterwards: recording it can never stop it being handled
 
     def _on_log(self, m: dict[str, Any]) -> None:
         if (
