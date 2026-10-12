@@ -5,6 +5,7 @@ fault log entries are passed on to conditions.py."""
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -19,6 +20,10 @@ from .client import HostLog
 LOG_AUTO_OPEN_CLOSE = 39
 LOG_INSTALLER_PROGRAMMING_END = 59
 LOG_DOWNLOAD_END = 54  # a Wintex (UDL) session ended: it may have changed zones or areas
+# Settings written (by Wintex): sent at once, one per write, whether or not the session then ends
+# cleanly (through a serial adapter on a Crestron port, Download End never came).
+LOG_SITE_DATA_CHANGED = 100
+REDISCOVER_DELAY = 5.0  # seconds after the last Site Data Changed before reading the zones again
 LOG_ARM_FAILED = 85
 PART_ARM_FROM_LOG = {78: 1, 79: 2, 80: 3, 204: 1, 205: 2, 206: 3, 207: 1, 208: 2, 209: 3}
 GROUP_PRIORITY_ALARM_RESTORE = 2
@@ -57,6 +62,7 @@ class EventsMixin:
     _alarm_zones: dict[int, tuple[str, float]]  # area -> the zone that set its alarm off, and when
     _internal_alarms: dict[int, Any]
     _last_cause_at: float
+    _rediscover_handle: asyncio.TimerHandle | None
 
     def _recent_user(self, area: int) -> str | None:
         credit = self._last_user
@@ -164,6 +170,20 @@ class EventsMixin:
             how = "engineer programming" if m["type"] == LOG_INSTALLER_PROGRAMMING_END else "a Wintex session"
             self._log.info("Connect: %s finished; re-reading zones and areas", how)
             self._spawn(self._rediscover())
+        elif m["type"] == LOG_SITE_DATA_CHANGED:
+            self._rediscover_soon()
+
+    def _rediscover_soon(self) -> None:
+        """Reads the zones and areas again once the writes have stopped."""
+        if self._rediscover_handle:
+            self._rediscover_handle.cancel()
+
+        def run() -> None:
+            self._rediscover_handle = None
+            self._log.info("Connect: the panel's settings changed; re-reading zones and areas")
+            self._spawn(self._rediscover())
+
+        self._rediscover_handle = asyncio.get_running_loop().call_later(REDISCOVER_DELAY, run)
 
     def _credit_alarm_zone(self, number: int) -> None:
         """Names the zone that set the alarm off as the alarm's "changed by",
