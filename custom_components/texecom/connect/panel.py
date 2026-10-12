@@ -116,6 +116,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._logged_flags: dict[int, list[int]] = {}  # area -> flags last named in the debug log
         self._internal_alarms: dict[int, InternalAlarm] = {}  # area -> its internal alarm flag (conditions.py)
         self._internal_alarm_handle: asyncio.TimerHandle | None = None
+        self._rediscover_handle: asyncio.TimerHandle | None = None  # events.py
         self._display_handle: asyncio.TimerHandle | None = None
         self._display_soon_at = float("-inf")  # when the keypad was last read for _read_display_soon
         self._alarm_at = float("-inf")  # when an area was last in alarm
@@ -136,7 +137,13 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
 
     async def stop(self) -> None:
         self._stopped = True
-        for handle in (self._refresh_handle, self._ready_handle, self._internal_alarm_handle, self._display_handle):
+        for handle in (
+            self._refresh_handle,
+            self._ready_handle,
+            self._internal_alarm_handle,
+            self._display_handle,
+            self._rediscover_handle,
+        ):
             if handle:
                 handle.cancel()
         for task in [self._task, *self._tasks]:
