@@ -24,4 +24,7 @@ async def test_diagnostics_hide_codes_and_address(hass, fake):
     # For mapping the panel: every area flag by name, and the raw system flags.
     assert diag["panel"]["area_flags"] == {1: ["16 Ready"]}  # disarmed, nothing open
     assert diag["panel"]["system_flags"] == "00 00 00 00 00 00 00 00"
+    # The panel's recent messages (capture.py): none unrecognised from the simulated panel.
+    assert isinstance(diag["panel"]["recent_messages"], list)
+    assert diag["panel"]["unrecognised_messages"] == {}
     assert await hass.config_entries.async_unload(entry.entry_id)

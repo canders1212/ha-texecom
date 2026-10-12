@@ -434,7 +434,11 @@ def decode_log_timestamp(value: int) -> dict[str, int]:
 
 
 def decode_message(body: bytes) -> dict[str, Any]:
-    """Decodes an unsolicited 'M' frame body."""
+    """Decodes an unsolicited 'M' frame body. `raw` is the body in hex."""
+    return {**_decode_message(body), "raw": body.hex(" ")}
+
+
+def _decode_message(body: bytes) -> dict[str, Any]:
     kind = body[0] if body else -1
     p = body[1:]
     if kind == MSG_ZONE and len(p) in (2, 3):
