@@ -36,6 +36,7 @@ async def test_mains_notice_while_on_battery(hass, fake):
     assert _notice(hass, "mains", entry) is None
     fake.on_battery = True
     await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
     await hass.async_block_till_done()
     note = _notice(hass, "mains", entry)
     assert note is not None and note["title"] == "Alarm panel on battery"
@@ -82,6 +83,7 @@ async def test_notices_can_be_turned_off(hass, fake):
     entry = await setup_connect(hass, fake, options={"notify_mains": False, "notify_tamper": False})
     fake.on_battery = True
     await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
     fake.send_log(60, 11, 0, areas=0)
     await wait_for(lambda: hass.states.get("binary_sensor.texecom_tamper").state == "on")
     assert hass.states.get("binary_sensor.texecom_mains_power").state == "off"

@@ -65,6 +65,7 @@ async def test_a_panel_that_never_reports_current_isnt_on_battery(hass, fake):
     # ...but a clearly flat voltage with no current is a mains failure
     fake.power_override = bytes([100, 78, 79, 0, 0])  # ~12.2 V
     await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
     await hass.async_block_till_done()
     assert not is_on(hass, "binary_sensor.texecom_mains_power")
     assert await hass.config_entries.async_unload(entry.entry_id)

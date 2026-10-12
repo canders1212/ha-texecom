@@ -816,6 +816,8 @@ async def test_mains_restore_comes_from_power_readings(fake):
         assert [t for t, _d in events] == ["fault", "fault_cleared"]
         fake.on_battery = True  # e.g. after a restart, with no log entry at all
         await panel.read_power()
+        assert panel.extra["faults"] == set()  # one reading can be a blip
+        await panel.read_power()
         assert panel.extra["faults"] == {"AC Fail"}
     finally:
         await panel.stop()
@@ -836,6 +838,8 @@ async def test_mains_from_a_real_panels_readings(fake):
         assert not panel.extra.get("faults")
         fake.power_override = battery_low
         await panel.read_power()
+        assert not panel.extra.get("faults")  # one reading can be a blip
+        await panel.read_power()
         assert panel.extra["faults"] == {"AC Fail"}
         fake.power_override = mains
         await panel.read_power()
@@ -844,8 +848,27 @@ async def test_mains_from_a_real_panels_readings(fake):
         assert panel.extra["faults"] == set()
         fake.power_override = battery
         await panel.read_power()
+        await panel.read_power()
         assert panel.extra["faults"] == {"AC Fail"}
         assert [t for t, _d in events] == ["fault", "fault_cleared", "fault"]
+    finally:
+        await panel.stop()
+
+
+async def test_a_single_battery_reading_is_a_blip(fake):
+    """Issue #18 and our own panel (12 Oct: 0 mA at 13.14 V with mains on,
+    333 mA at 13.63 V 30 s later): one "on battery" reading between mains
+    readings, or a garbled one, never shows mains off."""
+    mains, blip, garbled = bytes([100, 99, 98, 33, 2]), bytes([100, 92, 92, 0, 0]), bytes([100, 0, 0, 0, 0])
+    events = []
+    fake.power_override = mains
+    panel = await make_panel(fake, on_event=lambda t, d: events.append((t, d)))
+    try:
+        for reading in (blip, mains, blip, garbled, mains, garbled, garbled):
+            fake.power_override = reading
+            await panel.read_power()
+        assert not panel.extra.get("faults")
+        assert events == []
     finally:
         await panel.stop()
 
