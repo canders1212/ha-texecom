@@ -381,8 +381,20 @@ async def test_stale_exit_flag_is_ignored_while_armed(fake):
     try:
         fake.set_area(3)
         await wait_for(lambda: panel.areas[1].state == ARMED_AWAY)
-        panel._apply_area(1, "in exit", None)
+        panel._apply_area(1, "in exit", None, from_flags=True)
         assert panel.areas[1].state == ARMED_AWAY
+    finally:
+        await panel.stop()
+
+
+async def test_an_exit_message_while_armed_shows_arming(fake):
+    """The panel's own message is believed, in case its "disarmed" was missed."""
+    panel = await make_panel(fake)
+    try:
+        fake.set_area(3)
+        await wait_for(lambda: panel.areas[1].state == ARMED_AWAY)
+        panel._apply_area(1, "in exit", None)
+        assert panel.areas[1].state == ARMING
     finally:
         await panel.stop()
 
