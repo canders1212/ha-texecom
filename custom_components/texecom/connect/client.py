@@ -349,6 +349,11 @@ class ConnectClient:
             if size == 8 and flag >= 30:
                 continue
             bitmap = await self.command(P.CMD_GET_AREA_FLAGS, bytes([flag, 1]))
+            if P.is_nak(bitmap) and not P.NAK & ~valid_bits:
+                # With 8 areas and 1-byte bitmaps a NAK (0x15) is also a real
+                # answer (areas 1, 3 and 5): ask again, and believe it only
+                # if the panel says it twice, or a busy panel shows alarms.
+                bitmap = await self.command(P.CMD_GET_AREA_FLAGS, bytes([flag, 1]))
             if len(bitmap) != size:
                 raise PanelBusyError(f"area flag {flag}: expected {size} byte(s), got {len(bitmap)}")
             # With 1-byte bitmaps a NAK (0x15) only shows as bits for areas
