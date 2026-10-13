@@ -167,6 +167,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
     async def _run(self) -> None:
         delay = self.reconnect_min
         warned = False
+        refused = 0  # logins refused in a row
         while not self._stopped:
             self._closed_event.clear()
             client = ConnectClient(
@@ -187,6 +188,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
                 self.last_error = None
                 delay = self.reconnect_min
                 warned = False
+                refused = 0
                 self.set_connected(True)
                 if self._rediscover_pending:
                     self._spawn(self._rediscover())
@@ -207,10 +209,17 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
                 raise
             except LoginRejected as err:
                 self.last_error = str(err)
-                self._log.error("Connect: %s", err)
-                if self.on_auth_failed:
-                    self.on_auth_failed()
-                    self._stopped = True  # wait for a new code rather than retry
+                # Twice in a row before giving up: a panel that refused a
+                # login once while busy shouldn't leave the user re-entering
+                # a code that works.
+                refused += 1
+                if refused < 2:
+                    self._log.debug("Connect: %s; trying once more", err)
+                else:
+                    self._log.error("Connect: %s", err)
+                    if self.on_auth_failed:
+                        self.on_auth_failed()
+                        self._stopped = True  # wait for a new code rather than retry
             except Exception as err:  # noqa: BLE001 - any failure means reconnect
                 self.last_error = str(err)
                 # A SmartCom turns logins away for a minute or two after a
