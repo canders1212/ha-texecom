@@ -388,8 +388,9 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
                 return
             # An armed area can't start an exit delay without being disarmed
             # first; a flag re-read just after a remote arm can still show the
-            # exit flag (seen on a real panel), so ignore it.
-            if area.known and area.state not in (DISARMED, TRIGGERED, ARMING):
+            # exit flag (seen on a real panel), so ignore it. The panel's own
+            # message is believed (its "disarmed" may have been missed).
+            if from_flags and area.known and area.state not in (DISARMED, TRIGGERED, ARMING):
                 self._log.debug("Connect: area %s: ignoring a stale exit flag while armed", number)
                 return
             self.set_area(number, ARMING, None, changed_by)
