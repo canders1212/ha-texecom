@@ -955,6 +955,32 @@ async def test_auth_failure_stops_retrying(fake):
         await panel.stop()
 
 
+async def test_one_refused_login_is_tried_again(fake):
+    """A panel that refuses a working code once (busy) mustn't make the user
+    enter it again."""
+    calls = []
+    info, zones, areas = await probe("127.0.0.1", fake.port, "1234")
+    fake.nak_next[P.CMD_LOGIN] = 1
+    panel = ConnectPanel(
+        "127.0.0.1",
+        fake.port,
+        "1234",
+        {"night": 1},
+        info,
+        zones,
+        areas,
+        on_auth_failed=lambda: calls.append(1),
+        timing=FAST,
+        reconnect_min=0.05,
+    )
+    await panel.start()
+    try:
+        await wait_for(lambda: panel.connected)
+        assert calls == []
+    finally:
+        await panel.stop()
+
+
 async def test_clock_sync_uses_the_configured_time_zone(fake):
     tz = ZoneInfo("Europe/London")
     panel = await make_panel(fake, time_zone=tz)
