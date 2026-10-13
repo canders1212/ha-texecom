@@ -14,7 +14,7 @@ from fake_connect_panel import FAKE_USERS, FakeConnectPanel, load_diagnostics, u
 
 from custom_components.texecom.connect import capture
 from custom_components.texecom.connect import protocol as P
-from custom_components.texecom.connect.client import ConnectClient, LoginRejected, PanelBusyError, Timing
+from custom_components.texecom.connect.client import ConnectClient, ConnectError, LoginRejected, PanelBusyError, Timing
 from custom_components.texecom.connect.discovery import probe
 from custom_components.texecom.connect.panel import ConnectPanel
 from custom_components.texecom.panel import (
@@ -381,8 +381,20 @@ async def test_stale_exit_flag_is_ignored_while_armed(fake):
     try:
         fake.set_area(3)
         await wait_for(lambda: panel.areas[1].state == ARMED_AWAY)
-        panel._apply_area(1, "in exit", None)
+        panel._apply_area(1, "in exit", None, from_flags=True)
         assert panel.areas[1].state == ARMED_AWAY
+    finally:
+        await panel.stop()
+
+
+async def test_an_exit_message_while_armed_shows_arming(fake):
+    """The panel's own message is believed, in case its "disarmed" was missed."""
+    panel = await make_panel(fake)
+    try:
+        fake.set_area(3)
+        await wait_for(lambda: panel.areas[1].state == ARMED_AWAY)
+        panel._apply_area(1, "in exit", None)
+        assert panel.areas[1].state == ARMING
     finally:
         await panel.stop()
 
@@ -435,6 +447,34 @@ async def test_busy_nak_does_not_change_state(fake):
         assert not panel.zones[1].active  # a NAK byte (0x15) would read as "active"
     finally:
         await panel.stop()
+
+
+def single_flag_client(replies: dict[int, list[bytes]]) -> ConnectClient:
+    """A client reading area flags one at a time, answered from `replies`
+    (flag -> replies in turn; 0x00 for any other flag)."""
+    client = ConnectClient("127.0.0.1", 1, "1234")
+    client.single_flag_reads = True
+
+    async def command(cmd, body=b"", *, optional=False):
+        return replies[body[0]].pop(0) if replies.get(body[0]) else b"\x00"
+
+    client.command = command
+    return client
+
+
+async def test_a_busy_nak_is_not_read_as_alarms_on_an_8_area_panel():
+    """An Elite 88 has 8 areas in 1-byte bitmaps, so a NAK (0x15) is also a
+    valid answer: areas 1, 3 and 5. A NAK followed by the real answer must
+    not set those areas off."""
+    client = single_flag_client({P.FLAG_ALARM: [bytes([P.NAK]), b"\x00"]})
+    states = await client.area_states([1, 2, 3, 4, 5], 88)
+    assert all(state == "disarmed" for state, _part in states.values())
+
+
+async def test_the_same_answer_twice_is_believed_on_an_8_area_panel():
+    client = single_flag_client({P.FLAG_FULL_ARMED: [bytes([0x15]), bytes([0x15])]})
+    states = await client.area_states([1, 2, 3, 4, 5], 88)
+    assert [states[a][0] for a in (1, 2, 3, 4, 5)] == ["armed", "disarmed", "armed", "disarmed", "armed"]
 
 
 async def test_reconnects_after_the_panel_hangs_up(fake):
@@ -508,6 +548,17 @@ async def test_a_smartcom_busy_reporting_an_alarm_is_no_warning_until_entities_g
         assert len(warnings()) == 1 and "still trying" in warnings()[0]
     finally:
         await panel.stop()
+
+
+async def test_a_login_turned_away_is_not_logged_as_a_session_ending(fake, caplog):
+    """A busy SmartCom turns logins away for minutes, and each one ended
+    with an INFO line about a session that never started."""
+    caplog.set_level("DEBUG", logger="custom_components.texecom")
+    fake.busy_until = asyncio.get_running_loop().time() + 5
+    client = ConnectClient("127.0.0.1", fake.port, "1234", timing=FAST)
+    with pytest.raises(ConnectError):
+        await client.connect()
+    assert not [r for r in caplog.records if r.levelname == "INFO" and "session ended" in r.getMessage()]
 
 
 async def test_arm_failed_names_the_zone(fake):
@@ -923,6 +974,32 @@ async def test_auth_failure_stops_retrying(fake):
         await wait_for(lambda: calls)
         await asyncio.sleep(0.2)
         assert calls == [1]
+    finally:
+        await panel.stop()
+
+
+async def test_one_refused_login_is_tried_again(fake):
+    """A panel that refuses a working code once (busy) mustn't make the user
+    enter it again."""
+    calls = []
+    info, zones, areas = await probe("127.0.0.1", fake.port, "1234")
+    fake.nak_next[P.CMD_LOGIN] = 1
+    panel = ConnectPanel(
+        "127.0.0.1",
+        fake.port,
+        "1234",
+        {"night": 1},
+        info,
+        zones,
+        areas,
+        on_auth_failed=lambda: calls.append(1),
+        timing=FAST,
+        reconnect_min=0.05,
+    )
+    await panel.start()
+    try:
+        await wait_for(lambda: panel.connected)
+        assert calls == []
     finally:
         await panel.stop()
 

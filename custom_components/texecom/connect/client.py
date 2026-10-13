@@ -94,6 +94,7 @@ class ConnectClient:
         self._pending: tuple[int, int, asyncio.Future[bytes]] | None = None
         self._last_message_seq = -1
         self._closed = False
+        self._logged_in = False
         self._last_command = 0.0
         self._parser = P.FrameParser(self._on_frame, self._on_drop, lambda m: self._log.debug("Connect: %s", m))
         self.single_flag_reads = False
@@ -136,6 +137,7 @@ class ConnectClient:
         except BaseException:
             await self.close()
             raise
+        self._logged_in = True
         self._keepalive_task = asyncio.get_running_loop().create_task(self._keepalive_loop())
 
     async def close(self) -> None:
@@ -161,7 +163,10 @@ class ConnectClient:
         if self._closed:
             return
         self._closed = True
-        self._log.info("Connect: session ended: %s", reason)
+        # A login turned away (expected for minutes after a restart or an
+        # alarm) isn't a session ending: connect() reports it.
+        level = logging.INFO if self._logged_in else logging.DEBUG
+        self._log.log(level, "Connect: session ended: %s", reason)
         # Kept: asyncio holds tasks weakly, and a socket left open stops the
         # panel (one session at a time) from accepting the next login.
         self._teardown_task = asyncio.get_running_loop().create_task(self._teardown(reason))
@@ -349,6 +354,11 @@ class ConnectClient:
             if size == 8 and flag >= 30:
                 continue
             bitmap = await self.command(P.CMD_GET_AREA_FLAGS, bytes([flag, 1]))
+            if P.is_nak(bitmap) and not P.NAK & ~valid_bits:
+                # With 8 areas and 1-byte bitmaps a NAK (0x15) is also a real
+                # answer (areas 1, 3 and 5): ask again, and believe it only
+                # if the panel says it twice, or a busy panel shows alarms.
+                bitmap = await self.command(P.CMD_GET_AREA_FLAGS, bytes([flag, 1]))
             if len(bitmap) != size:
                 raise PanelBusyError(f"area flag {flag}: expected {size} byte(s), got {len(bitmap)}")
             # With 1-byte bitmaps a NAK (0x15) only shows as bits for areas
