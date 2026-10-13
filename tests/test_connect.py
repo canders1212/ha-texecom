@@ -14,7 +14,7 @@ from fake_connect_panel import FAKE_USERS, FakeConnectPanel, load_diagnostics, u
 
 from custom_components.texecom.connect import capture
 from custom_components.texecom.connect import protocol as P
-from custom_components.texecom.connect.client import ConnectClient, LoginRejected, PanelBusyError, Timing
+from custom_components.texecom.connect.client import ConnectClient, ConnectError, LoginRejected, PanelBusyError, Timing
 from custom_components.texecom.connect.discovery import probe
 from custom_components.texecom.connect.panel import ConnectPanel
 from custom_components.texecom.panel import (
@@ -548,6 +548,17 @@ async def test_a_smartcom_busy_reporting_an_alarm_is_no_warning_until_entities_g
         assert len(warnings()) == 1 and "still trying" in warnings()[0]
     finally:
         await panel.stop()
+
+
+async def test_a_login_turned_away_is_not_logged_as_a_session_ending(fake, caplog):
+    """A busy SmartCom turns logins away for minutes, and each one ended
+    with an INFO line about a session that never started."""
+    caplog.set_level("DEBUG", logger="custom_components.texecom")
+    fake.busy_until = asyncio.get_running_loop().time() + 5
+    client = ConnectClient("127.0.0.1", fake.port, "1234", timing=FAST)
+    with pytest.raises(ConnectError):
+        await client.connect()
+    assert not [r for r in caplog.records if r.levelname == "INFO" and "session ended" in r.getMessage()]
 
 
 async def test_arm_failed_names_the_zone(fake):
