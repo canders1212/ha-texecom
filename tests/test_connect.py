@@ -437,6 +437,34 @@ async def test_busy_nak_does_not_change_state(fake):
         await panel.stop()
 
 
+def single_flag_client(replies: dict[int, list[bytes]]) -> ConnectClient:
+    """A client reading area flags one at a time, answered from `replies`
+    (flag -> replies in turn; 0x00 for any other flag)."""
+    client = ConnectClient("127.0.0.1", 1, "1234")
+    client.single_flag_reads = True
+
+    async def command(cmd, body=b"", *, optional=False):
+        return replies[body[0]].pop(0) if replies.get(body[0]) else b"\x00"
+
+    client.command = command
+    return client
+
+
+async def test_a_busy_nak_is_not_read_as_alarms_on_an_8_area_panel():
+    """An Elite 88 has 8 areas in 1-byte bitmaps, so a NAK (0x15) is also a
+    valid answer: areas 1, 3 and 5. A NAK followed by the real answer must
+    not set those areas off."""
+    client = single_flag_client({P.FLAG_ALARM: [bytes([P.NAK]), b"\x00"]})
+    states = await client.area_states([1, 2, 3, 4, 5], 88)
+    assert all(state == "disarmed" for state, _part in states.values())
+
+
+async def test_the_same_answer_twice_is_believed_on_an_8_area_panel():
+    client = single_flag_client({P.FLAG_FULL_ARMED: [bytes([0x15]), bytes([0x15])]})
+    states = await client.area_states([1, 2, 3, 4, 5], 88)
+    assert [states[a][0] for a in (1, 2, 3, 4, 5)] == ["armed", "disarmed", "armed", "disarmed", "armed"]
+
+
 async def test_reconnects_after_the_panel_hangs_up(fake):
     events = []
     panel = await make_panel(fake, on_event=lambda t, d: events.append((t, d)))
