@@ -269,8 +269,11 @@ def decode_area_flags(flags: bytes, areas: list[int], panel_zones: int | None) -
             result[area] = ("in alarm", None)
         elif is_set(FLAG_ENTRY, area) or is_set(FLAG_SECOND_ENTRY, area):
             result[area] = ("in entry", None)
-        elif is_set(FLAG_EXIT, area) or is_set(FLAG_PART_ARMING, area):
+        elif (is_set(FLAG_EXIT, area) or is_set(FLAG_PART_ARMING, area)) and not is_set(FLAG_ARMED, area):
             # Without this, a re-read during the exit delay would say "disarmed".
+            # Armed (21) is clear until the exit delay ends; after it, a real
+            # panel left Exit set for a moment after a full arm, and Part Arming
+            # set all the time a part arm was armed, so Armed wins.
             result[area] = ("in exit", None)
         elif any(is_set(f, area) for f in (FLAG_ARMED, FLAG_FULL_ARMED, FLAG_PART_ARMED, FLAG_FORCE_ARMED)):
             part_arm = next(
