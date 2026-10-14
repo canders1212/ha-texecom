@@ -4,7 +4,8 @@
 Setting up and unloading a config entry. The panel driver is built in
 factory.py; the notices it raises are in notifications.py and issues.py.
 Changing an option the driver uses reloads the entry; the others apply at
-once. A zone or area the panel no longer has can have its device deleted."""
+once. The names for keypad users are filled in from the panel when it first
+connects (users.py). A zone or area the panel no longer has can have its device deleted."""
 
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ from .factory import create_panel
 from .issues import clear_clock_issue, watch_connection, watch_unrecognised
 from .notifications import dismiss_when_armed, watch_conditions
 from .panel import TexecomPanel
+from .users import fill_in_names_once
 
 PLATFORMS = [Platform.ALARM_CONTROL_PANEL, Platform.BINARY_SENSOR, Platform.SENSOR]
 
@@ -41,6 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> b
     entry.async_on_unload(watch_unrecognised(hass, entry, panel))
     entry.async_on_unload(dismiss_when_armed(hass, entry, panel))
     entry.async_on_unload(watch_conditions(hass, entry, panel))
+    entry.async_on_unload(fill_in_names_once(hass, entry, panel))
     if entry.data.get(CONF_CREATE_DASHBOARD):
         # Asked for at the end of setup; done once the entities exist.
         with contextlib.suppress(HomeAssistantError):

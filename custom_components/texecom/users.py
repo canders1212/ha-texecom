@@ -1,13 +1,21 @@
 """Names for keypad users: the option that maps user numbers to names
-("3 = Sam"), and showing a name wherever the panel says "User 3"."""
+("3 = Sam"), filling it in from the panel the first time Home Assistant
+connects to it, and showing a name wherever the panel says "User 3"."""
 
 from __future__ import annotations
 
+import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
-from .const import CONF_USER_NAMES
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+
+from .const import CONF_PROTOCOL, CONF_USER_NAMES, PROTOCOL_CONNECT
+from .panel import PanelError, TexecomPanel
+
+_LOGGER = logging.getLogger(__name__)
 
 # The engineer code shows as user 0 in keypad events, but has no user record
 # to read (the panel refuses user 0), so it's named here.
@@ -38,6 +46,37 @@ def panel_user_names(from_panel: Mapping[int, str]) -> dict[str, str]:
     if not from_panel:
         return {}
     return {ENGINEER_USER: ENGINEER_NAME, **{str(n): name for n, name in from_panel.items()}}
+
+
+def fill_in_names_once(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPanel) -> Callable[[], None]:
+    """The first time Home Assistant connects to a panel over Texecom Connect,
+    fills in the option from the names stored in the panel (the codes that
+    come with them are dropped by the driver). Only while the option has never
+    been saved: names typed in, or a list emptied on purpose, are left alone.
+    If the panel won't give them, they're asked for again at the next start.
+    Returns the function that stops it."""
+    if CONF_USER_NAMES in entry.options or entry.data.get(CONF_PROTOCOL) != PROTOCOL_CONNECT:
+        return lambda: None
+
+    async def fill_in() -> None:
+        try:
+            from_panel = await panel.async_read_user_names()
+        except PanelError as err:
+            _LOGGER.debug("Couldn't fill in the keypad users' names from the panel: %s", err)
+            return
+        if CONF_USER_NAMES not in entry.options:  # unless saved in the options meanwhile
+            hass.config_entries.async_update_entry(
+                entry, options={**entry.options, CONF_USER_NAMES: panel_user_names(from_panel)}
+            )
+
+    @callback
+    def when_connected() -> None:
+        if panel.connected:
+            stop()
+            entry.async_create_background_task(hass, fill_in(), "texecom keypad user names")
+
+    stop = panel.add_listener(when_connected)
+    return stop
 
 
 def format_user_names(names: Mapping[str, str]) -> str:

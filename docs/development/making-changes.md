@@ -34,7 +34,7 @@ All code paths are under `custom_components/texecom/`; test paths are under `tes
 | Crestron events, arming | `crestron/panel.py` | `test_crestron.py`, `ha/test_init.py` |
 | Area states, names, the offline grace (shared by both drivers) | `panel.py` (a contract: careful) | both driver test files |
 | How the alarm entity behaves, or the message when arming fails | `alarm_control_panel.py` | `ha/test_alarm_control_panel.py` |
-| Names for keypad users | `users.py` (the option's text), used by `alarm_control_panel.py` and `logbook.py` | `ha/test_users.py`, `ha/test_flows_options.py` |
+| Names for keypad users | `users.py` (the option's text, and filling it in from the panel when first connected), used by `alarm_control_panel.py` and `logbook.py` | `ha/test_users.py`, `ha/test_flows_options.py` |
 | What the activity list (Logbook) says about an event | `logbook.py` | `ha/test_logbook.py` |
 | Zone, tamper, problem, mains or connection sensors | `binary_sensor.py` | `ha/test_binary_sensor.py` |
 | Voltages, currents, keypad display | `sensor.py` | `ha/test_init.py` (add `ha/test_sensor.py` if you change it) |

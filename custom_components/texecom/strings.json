@@ -203,13 +203,13 @@
       },
       "user_names": {
         "title": "Names for keypad users",
-        "description": "When someone uses a keypad, the alarm says who: *changed by User 3*. Give users names to see *changed by Sam* instead.\n\nOne user per line, the number then the name, for example:\n`1 = Sam`\n`3 = Alex`\n\nThe numbers are the ones your installer gave each code.",
+        "description": "When someone uses a keypad, the alarm says who: *changed by Sam*, or *changed by User 3* for a user without a name.\n\nOne user per line, the number then the name, for example:\n`1 = Sam`\n`3 = Alex`\n\nThe numbers are the ones your installer gave each code. With a SmartCom or ComIP, the names stored in the panel are filled in the first time Home Assistant connects to it.",
         "data": {
           "user_names": "Names",
           "read_names": "Fill in the names stored in the panel"
         },
         "data_description": {
-          "read_names": "Adds the users your installer named, for you to check before saving. Names you've already given are kept. The panel sends each user's code along with the name: Home Assistant drops the codes at once, without keeping or logging them."
+          "read_names": "Adds the names stored in the panel again (after your installer changes them, say), for you to check before saving. Names already here are kept. The panel sends each user's code along with the name: Home Assistant drops the codes at once, without keeping or logging them."
         }
       },
       "notices": {
