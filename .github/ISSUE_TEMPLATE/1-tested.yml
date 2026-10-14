@@ -59,4 +59,4 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostics
-      description: On the panel's device page, choose **Download diagnostics** and drag the file here. Codes and addresses are removed automatically.
+      description: On the panel's device page, choose **Download diagnostics** and drag the file here. Codes, addresses and keypad user names are removed automatically.

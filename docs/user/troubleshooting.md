@@ -71,7 +71,7 @@ logger:
 
 Then look in **Settings → System → Logs** (**Show raw logs**) for lines with *Connect* or *Crestron*. Remove it again afterwards: it's chatty.
 
-**Diagnostics:** on the panel's device page, **⋮ → Download diagnostics** gives a report of the panel's state, including the status flags it reports the last 1,000 messages it sent and a count of each kind (with the times, so they show when the alarm was set and unset), with the codes and address removed. Attach it to bug reports.
+**Diagnostics:** on the panel's device page, **⋮ → Download diagnostics** gives a report of the panel's state, including the status flags it reports, the last 1,000 messages it sent and a count of each kind (with the times, so they show when the alarm was set and unset), with the codes, address and keypad user names removed. Attach it to bug reports.
 
 ## Reporting a problem
 
