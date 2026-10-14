@@ -1,6 +1,7 @@
 """The integration's options, as a short menu:
 
-- the Night and Home buttons (and, over Crestron, how a keypad arm shows)
+- the arm buttons: the part arm behind Night, Home, Vacation and Custom bypass
+  (and, over Crestron, how a keypad arm shows)
 - an optional Home Assistant alarm code
 - names for keypad users (which can be filled in from the panel, over Connect)
 - notifications for mains failures and tampers (Connect)
@@ -84,7 +85,7 @@ class TexecomOptionsFlow(OptionsFlow):
         current = {**self.config_entry.options, **(user_input or {})}
         return self.async_show_form(
             step_id="arm_modes_crestron" if crestron else "arm_modes",
-            data_schema=arm_modes_schema(current, crestron),
+            data_schema=arm_modes_schema(current, crestron, every_mode=True),
             errors=errors,
             description_placeholders={"help": HELP_PART_ARMS},
         )
