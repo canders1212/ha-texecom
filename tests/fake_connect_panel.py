@@ -387,7 +387,7 @@ class FakeConnectPanel:
             armed = (3, None) if arm_type == P.ARM_FULL else (4, arm_type)
             for area in self._areas_in(bitmap):
                 if self.exit_delay:
-                    self.set_area(1, area=area)
+                    self.set_area(1, 0 if arm_type == P.ARM_FULL else arm_type, area=area)
                     self._exit_timers[area] = asyncio.get_running_loop().call_later(
                         self.exit_delay, self.set_area, *armed, area
                     )
@@ -430,7 +430,16 @@ class FakeConnectPanel:
                 flags[62] |= bit  # Speaker Mimic
             on = {
                 5: (P.FLAG_ALARM,),
-                1: (P.FLAG_EXIT,),
+                # In an exit delay part_arm is what it's arming to (0: a full
+                # arm; None: the flags don't say, as on some panels).
+                1: (P.FLAG_EXIT,)
+                + (
+                    (P.FLAG_PART_ARMING, P.FLAG_PART_ARM_1 + part_arm - 1)
+                    if part_arm
+                    else (P.FLAG_FULL_ARMED_EXIT,)
+                    if part_arm == 0
+                    else ()
+                ),
                 2: (P.FLAG_ARMED, P.FLAG_ENTRY),
                 3: (P.FLAG_ARMED, P.FLAG_FULL_ARMED),
                 4: (P.FLAG_ARMED, P.FLAG_PART_ARMED, P.FLAG_PART_ARM_1 + (part_arm or 1) - 1)
@@ -445,6 +454,7 @@ COMMANDS = """Commands, one per line:
   zone N open|closed|tamper|alarm    zone N changes (alarm: active and alarmed, and logged)
   area [A] off|exit|entry|armed|alarm  the area changes (area 1, or area A)
   area [A] part N                    the area is part armed with part arm N
+  area [A] exit full|part N          an exit delay whose flags say it's arming to a full arm or part arm N
   user N                             user N enters a code at a keypad
   mains off|on                       mains fails (logged at once), or comes back (seen in the power readings)
   lid open|closed                    the panel's lid (Panel Box Tamper); while disarmed it sounds the
@@ -477,6 +487,14 @@ def run_command(panel: FakeConnectPanel, line: str) -> str:
                     panel.send_zone_alarm(int(n))
             case ["area", "part", n]:
                 panel.set_area(4, int(n))
+            case ["area", "exit", "full"]:
+                panel.set_area(1, 0)
+            case ["area", "exit", "part", n]:
+                panel.set_area(1, int(n))
+            case ["area", a, "exit", "full"] if a.isdigit() and int(a) in panel.area_states:
+                panel.set_area(1, 0, area=int(a))
+            case ["area", a, "exit", "part", n] if a.isdigit() and int(a) in panel.area_states:
+                panel.set_area(1, int(n), area=int(a))
             case ["area", state] if state in AREA_STATES:
                 panel.set_area(AREA_STATES[state])
             case ["area", a, "part", n] if a.isdigit() and int(a) in panel.area_states:
