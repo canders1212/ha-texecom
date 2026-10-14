@@ -21,10 +21,8 @@ from .const import (
     CONF_AREAS,
     CONF_BAUD_RATE,
     CONF_CONNECTION,
-    CONF_HOME_PART_ARM,
     CONF_INFO,
     CONF_KEYPAD_ARM_MODE,
-    CONF_NIGHT_PART_ARM,
     CONF_PROTOCOL,
     CONF_SERIAL_DEVICE,
     CONF_STATUS_POLL,
@@ -36,6 +34,7 @@ from .const import (
     DEFAULT_BAUD_RATE,
     DEFAULT_STATUS_POLL,
     EVENT,
+    PART_ARM_OPTIONS,
     PROTOCOL_CONNECT,
     TIME_SYNC_HOURS,
 )
@@ -65,7 +64,7 @@ def layout_to_data(info: PanelInfo, zones: list[PanelZone], areas: list[PanelAre
 
 def create_panel(hass: HomeAssistant, entry: ConfigEntry) -> TexecomPanel:
     data, options = entry.data, entry.options
-    part_arms = {"home": options.get(CONF_HOME_PART_ARM, 0), "night": options.get(CONF_NIGHT_PART_ARM, 0)}
+    part_arms = {mode: options.get(key, 0) for mode, key in PART_ARM_OPTIONS.items()}
 
     arm_failed = arm_failed_notifier(hass, entry)
 

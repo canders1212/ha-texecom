@@ -24,6 +24,8 @@ FEATURE_FOR_MODE = {
     "away": AlarmControlPanelEntityFeature.ARM_AWAY,
     "home": AlarmControlPanelEntityFeature.ARM_HOME,
     "night": AlarmControlPanelEntityFeature.ARM_NIGHT,
+    "vacation": AlarmControlPanelEntityFeature.ARM_VACATION,
+    "custom_bypass": AlarmControlPanelEntityFeature.ARM_CUSTOM_BYPASS,
 }
 
 
@@ -114,3 +116,11 @@ class TexecomAreaPanel(TexecomEntity, AlarmControlPanelEntity):
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         self._check_code(code, arming=True)
         await self._run(self.panel.arm(self.number, "night"))
+
+    async def async_alarm_arm_vacation(self, code: str | None = None) -> None:
+        self._check_code(code, arming=True)
+        await self._run(self.panel.arm(self.number, "vacation"))
+
+    async def async_alarm_arm_custom_bypass(self, code: str | None = None) -> None:
+        self._check_code(code, arming=True)
+        await self._run(self.panel.arm(self.number, "custom_bypass"))

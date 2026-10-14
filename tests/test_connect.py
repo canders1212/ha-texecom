@@ -21,6 +21,7 @@ from custom_components.texecom.panel import (
     ARMED_AWAY,
     ARMED_HOME,
     ARMED_NIGHT,
+    ARMED_VACATION,
     ARMING,
     DISARMED,
     PENDING,
@@ -365,6 +366,7 @@ async def test_a_reread_of_the_old_mode_doesnt_end_a_mode_switch(fake):
 
 
 async def test_keypad_part_arm_not_mapped_shows_as_home(fake):
+    """Home has no part arm here, so it can't be confused with one that has."""
     panel = await make_panel(fake, part_arms={"night": 1, "home": 0})
     try:
         fake.send_user(3)
@@ -372,6 +374,37 @@ async def test_keypad_part_arm_not_mapped_shows_as_home(fake):
         fake.set_area(4, 2)
         await wait_for(lambda: panel.areas[1].state == ARMED_HOME and panel.areas[1].part_arm == 2)
         assert panel.areas[1].changed_by == "User 3"
+    finally:
+        await panel.stop()
+
+
+async def test_keypad_part_arm_not_mapped_never_looks_like_a_mapped_one(fake):
+    """Issue #32: with Home on part arm 2, part arm 3 (no button) used to show
+    as Home too. Now it shows as a mode no part arm uses: Vacation."""
+    panel = await make_panel(fake, part_arms={"night": 1, "home": 2})
+    try:
+        fake.send_log(80, 0, 0)  # PART_ARM_3 log
+        fake.set_area(4, 3)
+        await wait_for(lambda: panel.areas[1].state == ARMED_VACATION and panel.areas[1].part_arm == 3)
+    finally:
+        await panel.stop()
+
+
+async def test_all_three_part_arms_can_have_a_button(fake):
+    """Night, Home, Vacation and Custom bypass can each use a part arm (issue #32)."""
+    panel = await make_panel(fake, part_arms={"night": 1, "home": 3, "vacation": 2})
+    try:
+        assert panel.offered_modes == ["away", "home", "night", "vacation"]
+        await panel.arm(1, "vacation")
+        assert (P.CMD_ARM_AREA, bytes([2, 1])) in fake.commands  # part arm 2, area 1
+        await wait_for(lambda: panel.areas[1].state == ARMED_VACATION and panel.areas[1].part_arm == 2)
+        await panel.disarm(1)
+        await wait_for(lambda: panel.areas[1].state == DISARMED)
+        fake.send_log(80, 0, 0)  # PART_ARM_3 log, at the keypad
+        fake.set_area(4, 3)
+        await wait_for(lambda: panel.areas[1].state == ARMED_HOME and panel.areas[1].part_arm == 3)
+        with pytest.raises(PanelError, match="custom_bypass isn't set up"):
+            await panel.arm(1, "custom_bypass")
     finally:
         await panel.stop()
 

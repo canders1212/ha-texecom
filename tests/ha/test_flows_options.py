@@ -90,6 +90,34 @@ async def test_night_and_home_buttons_reconnect(hass, fake):
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
+async def test_vacation_and_custom_bypass_buttons_in_options(hass, fake):
+    entry = await setup_connect(hass, fake)
+    result = await open_options(hass, entry, "arm_modes")
+    assert [str(k) for k in result["data_schema"].schema] == [
+        "night_part_arm",
+        "home_part_arm",
+        "vacation_part_arm",
+        "custom_bypass_part_arm",
+    ]
+    result = await options(hass, entry, "arm_modes", night_part_arm="1", vacation_part_arm="1")
+    assert result["errors"] == {"base": "same_part_arm"}
+    result = await options(
+        hass,
+        entry,
+        "arm_modes",
+        night_part_arm="1",
+        home_part_arm="0",
+        vacation_part_arm="2",
+        custom_bypass_part_arm="3",
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["vacation_part_arm"] == 2 and entry.options["custom_bypass_part_arm"] == 3
+    await settle(hass)
+    await wait_for(lambda: entry.runtime_data.connected)
+    assert hass.states.get(ALARM).attributes["supported_features"] == 2 | 4 | 16 | 32
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_alarm_code_applies_without_reconnecting(hass, fake):
     entry = await setup_connect(hass, fake)
     result = await open_options(hass, entry, "alarm_code")
