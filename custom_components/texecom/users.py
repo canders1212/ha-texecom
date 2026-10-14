@@ -9,6 +9,10 @@ from typing import Any
 
 from .const import CONF_USER_NAMES
 
+# The engineer code shows as user 0 in keypad events, but has no user record
+# to read (the panel refuses user 0), so it's named here.
+ENGINEER_USER, ENGINEER_NAME = "0", "Engineer"
+
 # "3 = Sam", "3: Sam", "User 3 = Sam"...
 _LINE = re.compile(r"^\s*(?:user\s*)?(\d{1,4})\s*[=:,-]\s*(\S.*?)\s*$", re.IGNORECASE)
 # How the panel drivers name a keypad user in "changed by".
@@ -26,6 +30,14 @@ def parse_user_names(text: str) -> dict[str, str] | None:
             return None
         names[str(int(match.group(1)))] = match.group(2)
     return names
+
+
+def panel_user_names(from_panel: Mapping[int, str]) -> dict[str, str]:
+    """The option's form of the names read from the panel ({3: "Sam"} ->
+    {"3": "Sam"}), with the engineer named; empty if the panel had none."""
+    if not from_panel:
+        return {}
+    return {ENGINEER_USER: ENGINEER_NAME, **{str(n): name for n, name in from_panel.items()}}
 
 
 def format_user_names(names: Mapping[str, str]) -> str:
