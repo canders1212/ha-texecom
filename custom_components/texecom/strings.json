@@ -94,6 +94,9 @@
         "description": "Enter the panel's current UDL code (your installer can tell you if it was changed). Checking it can take up to a minute.",
         "data": {
           "udl": "UDL code"
+        },
+        "data_description": {
+          "udl": "The panel's remote-access code (not your keypad code). Texecom's default is 1234, and most panels keep it."
         }
       },
       "reconfigure": {
@@ -116,6 +119,10 @@
           "host": "IP address",
           "port": "Port",
           "udl": "UDL code"
+        },
+        "data_description": {
+          "port": "Leave at 10001 unless your installer changed it.",
+          "udl": "The panel's remote-access code (not your keypad code). Texecom's default is 1234, and most panels keep it."
         }
       },
       "connect_check": {
