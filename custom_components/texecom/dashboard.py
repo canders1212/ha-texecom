@@ -169,3 +169,23 @@ async def async_create_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> str
         raise HomeAssistantError("couldn't add the dashboard") from err
     _LOGGER.info("Added the Alarm dashboard at /%s", url_path)
     return url_path
+
+
+async def async_remove_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Deletes this panel's dashboard when the panel is deleted, so no "Alarm"
+    is left in the sidebar with every entity missing."""
+    try:
+        handler = hass.data["websocket_api"]["lovelace/dashboards/create"][0]
+        collection = inspect.unwrap(handler).__self__.storage_collection
+        dashboards = hass.data["lovelace"].dashboards
+    except (KeyError, AttributeError, TypeError, IndexError):
+        return  # no dashboards to delete
+    own = f"{URL_PATH}-{entry.entry_id[-6:].lower()}"
+    for url_path in (own, URL_PATH):
+        if url_path not in dashboards:
+            continue
+        if url_path == own or await _shows_entry(hass, entry, dashboards[url_path]):
+            for item in list(collection.async_items()):
+                if item.get("url_path") == url_path:
+                    await collection.async_delete_item(item["id"])
+                    _LOGGER.info("Deleted the Alarm dashboard at /%s", url_path)
