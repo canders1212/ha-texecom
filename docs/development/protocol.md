@@ -51,7 +51,7 @@ The protocol follows Joseph Heenan's [texecom-connect](https://github.com/davidM
 | Message | Content |
 |---|---|
 | **Zone** | Zone number and a state byte: bits 0–1 secure/active/tamper/short, bit 2 fault, bit 3 failed test, bit 4 **alarmed**, bit 5 manual bypass, bit 6 auto bypass, bit 7 masked |
-| **Area** | Area and state: 0 disarmed, 1 in exit, 2 in entry, 3 armed, 4 part armed, 5 in alarm. **6 and 7** arrive straight after Part Arm 1 and 2 (a "settled" part arm?): the driver re-reads the area flags instead. On 8 Oct 2026 state 6 came with log entries 113 (*Remote Command*, group 9, parameter 1) and 207 (*Remote Part Arm 1*, group 6). Neither value is in the published lists, so the debug log shows `unknown (6)` |
+| **Area** | Area and state: 0 disarmed, 1 in exit, 2 in entry, 3 armed, 4 part armed, 5 in alarm. **6, 7 and 8** arrive straight after the *part armed* (4) for Part Arm 1, 2 and 3 (5 + the part arm; Part Arm 2 remote and Part Arm 3 at the keypad on 14 Oct 2026): the driver re-reads the area flags instead. On 8 Oct 2026 state 6 came with log entries 113 (*Remote Command*, group 9, parameter 1) and 207 (*Remote Part Arm 1*, group 6). Neither value is in the published lists, so the debug log shows `unknown (6)` |
 | **User** | User number and method (code, tag, code + tag) when someone uses a keypad |
 | **Log** | Event type, group (low 6 bits; bit 6 "communication delayed", bit 7 "communicated"), parameter (a zone or user number), areas, timestamp |
 | **Output** | Output location and state: decoded but not used yet |
@@ -131,9 +131,9 @@ The type number the panel reports (zone details, and the type of a zone's alarm 
 |---|---|---|---|
 | 0 | Alarm | *Alarm!* on a re-read | Used from the start (texecom2mqtt's layout). Another project saw it act as alarm *memory* on V4 firmware (below): check on this panel (D15) |
 | 16 | Ready | **Ready to arm** | New: confirm on a real panel (D12) |
-| 17, 18 / 19 | Entry, Second Entry / Exit | *Entry delay* / *Arming…* on a re-read | Used. This panel showed a stale Exit flag just after a remote arm (the driver ignores it while armed) |
-| 21, 22, 23, 26 | Armed, Full Armed, Part Armed, Force Armed | the armed states on a re-read | Used |
-| 24 | Part Arming | *Arming…* on a re-read | Used |
+| 17, 18 / 19 | Entry, Second Entry / Exit | *Entry delay* / *Arming…* on a re-read | Used. This panel showed a stale Exit flag just after a remote arm: Exit counts only while Armed (21) is clear |
+| 21, 22, 23, 26 | Armed, Full Armed, Part Armed, Force Armed | the armed states on a re-read | Used. **21 is clear during the exit delay and set from the moment the area arms**; 23 comes about 15 s later. After a disarm, 23 and 60 *Armed/Alarm* stay set for a few seconds without 21 (the driver ignores flags just after a disarm) |
+| 24 | Part Arming | *Arming…* on a re-read, while Armed (21) is clear | Used. Set with 19 *Exit* and 20 *Entry/Exit* during a part arm's exit delay, and **stayed set all the time Part Arm 2 or 3 was armed** (both have nothing programmed on this panel; not seen with Part Arm 1), so it alone made a reconnect show *Arming…* until the disarm (fixed 14 Oct 2026) |
 | 50–52 | Part Arm 1–3 | which part arm | Used |
 | 44 | Internal Alarm | **A tamper the panel doesn't log**: while an area is disarmed, flag 44 set for 5 s with nothing reported to explain it (a tamper, a zone alarm, a failed arm; the area in exit, entry or alarm) shows as the tamper *Internal Alarm* until it clears | Seen 8 Oct 2026: set 1 s after a detector's cover opened (with 62 *Speaker Mimic*), while disarmed, with no tamper logged; both cleared once a user code was entered, not when the cover closed. On V4 firmware another project saw it set while an alarm sounded (below). What else sets it is to be checked (exit and entry tones, chime, the fail-to-set warning, walk test): the driver ignores it in exit, entry and alarm, and after a failed arm |
 | 62 | Speaker Mimic | — | Set with 44 above. Not used: it may follow exit, entry or chime tones too |
@@ -170,6 +170,7 @@ None of these is understood yet, and nothing relies on them. They're candidates 
 - **Zone alarms are logged twice** (again once reported). Sometimes only the second arrives, after the disarm. The zone's *alarmed* bit is set at once and stays set (alarm memory) until reset, so a zone in a disarmed area doesn't explain a later alarm.
 - **After an alarm the panel can go back to *in entry*** when the entry zone is seen again: *in alarm*, *in entry* 1.6 s later, then *in alarm* again 16 s after that, with the sirens sounding throughout until the disarm. The zone stays *alarmed*. The driver keeps showing the alarm (`connect/panel.py`, `_apply_area`).
 - **A detector that sees the entry route can raise a real alarm**: walking in, an interior PIR saw the person 0.6 s before the entry zone did, so the area went *in alarm* (keypad sounder only; the alarm was reported) and 0.6 s later *in entry*.
+- **Part arms with nothing programmed** (14 Oct 2026, Part Arms 2 and 3 here) arm every zone, from the keypad and remotely (command 6). So a button mapped to an unprogrammed part arm can arm the whole house. Once, choosing a part arm at the keypad showed *Call Engineer* and didn't arm (nothing reached Home Assistant); later tries with both part arms armed normally, so the cause is unknown.
 - **After an alarm or a tamper**, clearing *System Alerts!* at the keypad needed the engineer code on this panel (it shows as user 0 in the *user* message); the spanner light stayed on afterwards (probably a service reminder).
 
 ### Power

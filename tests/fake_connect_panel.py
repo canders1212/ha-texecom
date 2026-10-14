@@ -132,6 +132,9 @@ class FakeConnectPanel:
         # Area flags 44 Internal Alarm and 62 Speaker Mimic: the internal sounder going off, as for a
         # tamper while disarmed (seen on a real panel); a code at the keypad silences it.
         self.internal_alarm = False
+        # A real panel kept Part Arming set while armed with a part arm that
+        # has nothing programmed (Premier Elite 24, V6.05.03, 14 Oct 2026).
+        self.sticky_part_arming = False
         self.display: str | None = None  # the keypad's text; None: "Premier Elite" and the time
         # A SmartCom reports an alarm itself: about 1.5 s after the disarm that follows it, it hangs
         # up, and turns logins away for about 2 minutes (seen on a real panel). 0: never.
@@ -430,7 +433,8 @@ class FakeConnectPanel:
                 1: (P.FLAG_EXIT,),
                 2: (P.FLAG_ARMED, P.FLAG_ENTRY),
                 3: (P.FLAG_ARMED, P.FLAG_FULL_ARMED),
-                4: (P.FLAG_ARMED, P.FLAG_PART_ARMED, P.FLAG_PART_ARM_1 + (part_arm or 1) - 1),
+                4: (P.FLAG_ARMED, P.FLAG_PART_ARMED, P.FLAG_PART_ARM_1 + (part_arm or 1) - 1)
+                + ((P.FLAG_PART_ARMING,) if self.sticky_part_arming else ()),
             }.get(s, ())
             for flag in on:
                 flags[flag] |= bit
