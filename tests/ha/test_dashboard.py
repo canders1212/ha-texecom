@@ -59,3 +59,25 @@ async def test_each_panel_keeps_its_own_dashboard(hass, fake):
             assert await hass.config_entries.async_unload(entry.entry_id)
     finally:
         await second.close()
+
+
+async def test_deleting_a_panel_deletes_its_dashboard(hass, fake):
+    """Otherwise an "Alarm" stays in the sidebar with every entity missing."""
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "lovelace", {})
+    second = FakeConnectPanel(zones=DEMO_ZONES, exit_delay=0.05)
+    await second.start()
+    try:
+        first_entry = await setup_connect(hass, fake)
+        await async_create_dashboard(hass, first_entry)
+        second_entry = await setup_connect(hass, second)
+        assert await async_create_dashboard(hass, second_entry) != "texecom-alarm"
+        assert await hass.config_entries.async_remove(second_entry.entry_id)
+        await hass.async_block_till_done()
+        assert sorted(url for url in hass.data["lovelace"].dashboards if url) == ["texecom-alarm"]
+        assert await hass.config_entries.async_remove(first_entry.entry_id)
+        await hass.async_block_till_done()
+        assert [url for url in hass.data["lovelace"].dashboards if url] == []
+    finally:
+        await second.close()
