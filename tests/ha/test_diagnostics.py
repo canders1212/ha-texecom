@@ -29,3 +29,13 @@ async def test_diagnostics_hide_codes_and_address(hass, fake):
     assert diag["panel"]["unrecognised_messages"] == {}
     assert isinstance(diag["panel"]["message_kinds"], dict)
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_diagnostics_hide_keypad_user_names(hass, fake):
+    # People's names: users post this file in public issues. Which users have names stays.
+    entry = await setup_connect(hass, fake, options={"user_names": {"3": "Sam", "4": "Alex"}})
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["entry"]["options"]["user_names"] == {"3": "**REDACTED**", "4": "**REDACTED**"}
+    assert "Sam" not in str(diag) and "Alex" not in str(diag)
+    assert entry.options["user_names"] == {"3": "Sam", "4": "Alex"}  # the stored names are untouched
+    assert await hass.config_entries.async_unload(entry.entry_id)
