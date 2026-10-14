@@ -122,6 +122,7 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._display_soon_at = float("-inf")  # when the keypad was last read for _read_display_soon
         self._alarm_at = float("-inf")  # when an area was last in alarm
         self._disarmed_at: dict[int, float] = {}  # area -> when the panel last announced its disarm
+        self._exit_reads: dict[int, int] = {}  # area -> re-reads left to learn what it's arming to
         self._last_cause_at = float("-inf")  # when a tamper, zone alarm or failed arm was last reported
         self.last_error: str | None = None
         self.capture = Capture()  # the panel's recent messages, for diagnostics (capture.py)
@@ -394,6 +395,8 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
                 self._log.debug("Connect: area %s: ignoring a stale exit flag while armed", number)
                 return
             self.set_area(number, ARMING, None, changed_by)
+            if from_flags:
+                self._learn_arming_to(number, part_arm)
         elif state == "in entry":
             if area.state == TRIGGERED:
                 # After an alarm the panel can go back to "in entry" when the
@@ -416,6 +419,18 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
             else:
                 changed_by = None  # a zone, not a user, sets an alarm off; named when it's reported
             self.set_area(number, TRIGGERED, area.part_arm, changed_by)
+
+    def _learn_arming_to(self, number: int, part_arm: int | None) -> None:
+        """From the flags in an exit delay: 0 a full arm, 1-3 a part arm, None
+        not known yet (read again, a few times)."""
+        if part_arm is None:
+            if self._exit_reads.get(number, 0) > 0:
+                self._exit_reads[number] -= 1
+                self._refresh_areas_soon()
+            return
+        self._exit_reads.pop(number, None)
+        armed = ARMED_AWAY if part_arm == 0 else self.armed_state_for_part_arm(number, part_arm)
+        self.set_area_arming_to(number, armed)
 
     def _end_switch(self, number: int) -> bool:
         """Ends a mode switch; whether one was under way."""

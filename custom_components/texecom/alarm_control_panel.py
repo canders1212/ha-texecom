@@ -79,7 +79,7 @@ class TexecomAreaPanel(TexecomEntity, AlarmControlPanelEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         area = self.panel.areas[self.number]
-        return {"area_number": self.number, "part_arm": area.part_arm}
+        return {"area_number": self.number, "part_arm": area.part_arm, "arming_to": area.arming_to}
 
     def _check_code(self, code: str | None, arming: bool) -> None:
         if not self._code or (arming and not self.code_arm_required):

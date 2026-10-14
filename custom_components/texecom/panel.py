@@ -106,6 +106,7 @@ class PanelArea:
     changed_by: str | None = None
     known: bool = False
     ready: bool | None = None  # ready to arm, as the panel says (None: it doesn't say)
+    arming_to: str | None = None  # while arming, the armed state it'll be (e.g. ARMED_NIGHT), when known
 
 
 @dataclass
@@ -242,11 +243,24 @@ class TexecomPanel(ABC):
         area.state, area.part_arm, area.known = state, part_arm, True
         if state == DISARMED or state in ARMED_STATES:
             self._requested_mode.pop(number, None)
+        if state != ARMING:
+            area.arming_to = None
+        elif area.arming_to is None and (mode := self._requested_mode.get(number)):
+            area.arming_to = ARMED_STATE_FOR_MODE[mode]  # Home Assistant asked for it
         if changed:
             _LOGGER.debug(
                 "Area %s (%s) -> %s%s", number, area.name, state, f" (part arm {part_arm})" if part_arm else ""
             )
             self.notify()
+
+    def set_area_arming_to(self, number: int, armed_state: str) -> None:
+        """While an area is arming, the armed state it'll be, once the panel says."""
+        area = self.areas.get(number)
+        if area is None or area.state != ARMING or area.arming_to == armed_state:
+            return
+        area.arming_to = armed_state
+        _LOGGER.debug("Area %s (%s) arming to %s", number, area.name, armed_state)
+        self.notify()
 
     def set_zone(self, number: int, state: str, bypassed: bool | None = None) -> None:
         zone = self.zones.get(number)

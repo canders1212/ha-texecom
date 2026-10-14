@@ -34,6 +34,9 @@ FIRE_ALARM = 129
 FIRE_ALARM_END = 130
 USER_CHANGE_WINDOW = 60.0  # a keypad logon this recent explains an arm/disarm
 ZONE_ALARM_REPEAT = 30.0
+# Flag re-reads (about 0.5 s apart) in an exit delay until they say what it's
+# arming to: a full arm's flag came about 1.5 s after the exit delay started.
+EXIT_READS = 4
 
 
 @dataclass
@@ -63,6 +66,7 @@ class EventsMixin:
     _internal_alarms: dict[int, Any]
     _last_cause_at: float
     _rediscover_handle: asyncio.TimerHandle | None
+    _exit_reads: dict[int, int]
 
     def _recent_user(self, area: int) -> str | None:
         credit = self._last_user
@@ -100,6 +104,9 @@ class EventsMixin:
                 self._apply_area(m["area"], m["state"], None, self._recent_user(m["area"]))
             if m["state"] == "disarmed":
                 self._refresh_areas_soon()  # whether it's ready to arm (not announced)
+            elif m["state"] == "in exit":
+                self._exit_reads[m["area"]] = EXIT_READS
+                self._refresh_areas_soon()  # what it's arming to: only the flags say
             self._read_display_soon()  # e.g. "Area in Entry"
             if m["state"] in ("disarmed", "armed", "part armed") and self._last_user:
                 # A code (or a request from Home Assistant) explains one arm
