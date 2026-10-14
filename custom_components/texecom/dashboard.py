@@ -27,7 +27,8 @@ GROUPS = (
     ("Fire and safety", "mdi:fire", {"smoke", "gas", "carbon_monoxide", "safety", "heat"}),
     ("Other zones", "mdi:shield-outline", None),
 )
-MODES = {2: "armed_away", 4: "armed_night", 1: "armed_home"}  # feature bit -> mode
+# Feature bit -> mode, in the order the buttons show.
+MODES = {2: "armed_away", 4: "armed_night", 1: "armed_home", 32: "armed_vacation", 16: "armed_custom_bypass"}
 URL_PATH = "texecom-alarm"
 
 
