@@ -24,10 +24,26 @@ PENDING = "pending"  # entry delay
 ARMED_AWAY = "armed_away"
 ARMED_HOME = "armed_home"
 ARMED_NIGHT = "armed_night"
+ARMED_VACATION = "armed_vacation"
+ARMED_CUSTOM_BYPASS = "armed_custom_bypass"
 TRIGGERED = "triggered"
 
-ARMED_STATE_FOR_MODE = {"away": ARMED_AWAY, "home": ARMED_HOME, "night": ARMED_NIGHT}
-ARM_MODES = ("away", "home", "night")
+# Away is the full arm; each of the others can use one of the panel's part arms.
+PART_ARM_MODES = ("home", "night", "vacation", "custom_bypass")
+ARM_MODES = ("away", *PART_ARM_MODES)
+ARMED_STATE_FOR_MODE = {
+    "away": ARMED_AWAY,
+    "home": ARMED_HOME,
+    "night": ARMED_NIGHT,
+    "vacation": ARMED_VACATION,
+    "custom_bypass": ARMED_CUSTOM_BYPASS,
+}
+ARMED_STATES = frozenset(ARMED_STATE_FOR_MODE.values())
+# A part arm no mode uses shows as the first of these that no part arm uses,
+# so it never looks like one that has a button (issue #32), and Apple Home
+# still shows it as armed (HomeKit has no custom bypass state). The area's
+# part_arm says which it was.
+UNMAPPED_PART_ARM_MODES = ("home", "night", "vacation")
 
 # How long entities keep showing the last known state after the connection
 # drops. A SmartCom drops the session for about a minute whenever it reports
@@ -102,13 +118,13 @@ class PanelInfo:
 class TexecomPanel(ABC):
     """A panel connection that keeps zones and areas up to date.
 
-    part_arms maps the Home and Night modes to a panel part arm (1-3), or 0
-    when the mode isn't offered. Listeners are called with no arguments after
+    part_arms maps the Home, Night, Vacation and Custom bypass modes to a panel
+    part arm (1-3), or 0 when the mode isn't offered (a missing mode is 0). Listeners are called with no arguments after
     any change (zone, area, connection or info).
     """
 
     def __init__(self, part_arms: dict[str, int]) -> None:
-        self.part_arms = {"home": int(part_arms.get("home") or 0), "night": int(part_arms.get("night") or 0)}
+        self.part_arms = {mode: int(part_arms.get(mode) or 0) for mode in PART_ARM_MODES}
         self.zones: dict[int, PanelZone] = {}
         self.areas: dict[int, PanelArea] = {}
         self.info = PanelInfo()
@@ -187,22 +203,23 @@ class TexecomPanel(ABC):
 
     @property
     def offered_modes(self) -> list[str]:
-        """Arm modes this panel can offer: Away always, Home/Night when mapped."""
-        return ["away"] + [m for m in ("home", "night") if self.part_arms[m]]
+        """Arm modes this panel can offer: Away always, the others when mapped."""
+        return ["away"] + [m for m in PART_ARM_MODES if self.part_arms[m]]
 
     def mode_for_part_arm(self, part_arm: int | None) -> str | None:
-        for mode in ("night", "home"):
+        for mode in PART_ARM_MODES:
             if part_arm and self.part_arms[mode] == part_arm:
                 return mode
         return None
 
     def armed_state_for_part_arm(self, area: int, part_arm: int | None) -> str:
         """HA state for a part arm: its mapped mode, else the mode we asked
-        for, else Home (a part arm nobody mapped is still a part arm)."""
+        for, else a free mode (UNMAPPED_PART_ARM_MODES)."""
         mode = self.mode_for_part_arm(part_arm)
         if mode is None:
             requested = self._requested_mode.get(area)
-            mode = requested if requested in ("home", "night") else "home"
+            free = next((m for m in UNMAPPED_PART_ARM_MODES if not self.part_arms[m]), "home")
+            mode = requested if requested in PART_ARM_MODES else free
         return ARMED_STATE_FOR_MODE[mode]
 
     def set_area(self, number: int, state: str, part_arm: int | None = None, changed_by: str | None = None) -> None:
@@ -223,7 +240,7 @@ class TexecomPanel(ABC):
             # or "User 3" over. Armed after an exit delay keeps who started it.
             area.changed_by = None
         area.state, area.part_arm, area.known = state, part_arm, True
-        if state in (DISARMED, ARMED_AWAY, ARMED_HOME, ARMED_NIGHT):
+        if state == DISARMED or state in ARMED_STATES:
             self._requested_mode.pop(number, None)
         if changed:
             _LOGGER.debug(
@@ -253,7 +270,7 @@ class TexecomPanel(ABC):
 
     @abstractmethod
     async def arm(self, area: int, mode: str) -> None:
-        """Arm an area in 'away', 'home' or 'night'. Raises PanelError."""
+        """Arm an area in one of ARM_MODES. Raises PanelError."""
 
     @abstractmethod
     async def disarm(self, area: int) -> None:

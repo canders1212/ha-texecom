@@ -56,7 +56,7 @@ Open **Settings → Devices & services → Texecom → ⚙️ Configure**, and p
 
 | In the menu | What it does |
 |---|---|
-| **Night and Home buttons** | The part arm behind each button. *'Not used'* hides the button. *Reconnects to the panel* |
+| **Arm buttons** | The part arm behind Night, Home, Vacation and Custom bypass. *'Not used'* hides the button. *Reconnects to the panel* |
 | **Home Assistant alarm code** | Optional. Home Assistant asks for it before disarming (and, if you tick the box, before arming). It's checked by Home Assistant, not the panel, and has nothing to do with your keypad codes. **It stops Apple Home and some automations working**: see [what a code affects](#what-a-home-assistant-alarm-code-affects) first |
 | **Names for keypad users** | One per line, like `3 = Sam`: the alarm then says *changed by Sam* instead of *User 3*, here and in the activity list. With a SmartCom or ComIP, tick *Fill in the names stored in the panel* to start from the names your installer gave (the engineer code, user 0, is filled in as *Engineer*). The panel sends each user's code with the name; Home Assistant drops the codes at once, without keeping or logging them |
 | **Notifications** | Whether Home Assistant shows a notification while the panel has no mains power, or while a tamper is open (both on to start with) |

@@ -26,7 +26,15 @@ from homeassistant.helpers.selector import (
 
 from ..connect.client import ConnectError, LoginRejected
 from ..connect.discovery import probe
-from ..const import CONF_CREATE_DASHBOARD, CONF_HOME_PART_ARM, CONF_KEYPAD_ARM_MODE, CONF_NIGHT_PART_ARM
+from ..const import (
+    CONF_CREATE_DASHBOARD,
+    CONF_CUSTOM_BYPASS_PART_ARM,
+    CONF_HOME_PART_ARM,
+    CONF_KEYPAD_ARM_MODE,
+    CONF_NIGHT_PART_ARM,
+    CONF_VACATION_PART_ARM,
+    PART_ARM_OPTIONS,
+)
 from ..factory import layout_to_data
 
 _LOGGER = logging.getLogger(__name__)
@@ -101,11 +109,16 @@ async def validate_serial(device: str, baud_rate: int) -> str | None:
     return None
 
 
-def arm_modes_schema(defaults: Mapping[str, Any], crestron: bool) -> vol.Schema:
+def arm_modes_schema(defaults: Mapping[str, Any], crestron: bool, every_mode: bool = False) -> vol.Schema:
+    """The part arm behind each button. Setup asks for Night and Home only;
+    Options adds Vacation and Custom bypass, for panels using all three part arms."""
     schema: dict[Any, Any] = {
         vol.Required(CONF_NIGHT_PART_ARM, default=str(defaults.get(CONF_NIGHT_PART_ARM, 1))): PART_ARM_SELECTOR,
         vol.Required(CONF_HOME_PART_ARM, default=str(defaults.get(CONF_HOME_PART_ARM, 0))): PART_ARM_SELECTOR,
     }
+    if every_mode:
+        for key in (CONF_VACATION_PART_ARM, CONF_CUSTOM_BYPASS_PART_ARM):
+            schema[vol.Required(key, default=str(defaults.get(key, 0)))] = PART_ARM_SELECTOR
     if crestron:
         schema[vol.Required(CONF_KEYPAD_ARM_MODE, default=defaults.get(CONF_KEYPAD_ARM_MODE, "away"))] = (
             KEYPAD_MODE_SELECTOR
@@ -118,15 +131,12 @@ def with_dashboard_choice(schema: vol.Schema) -> vol.Schema:
 
 
 def arm_mode_options(user_input: Mapping[str, Any]) -> dict[str, Any]:
-    options = {
-        CONF_NIGHT_PART_ARM: int(user_input[CONF_NIGHT_PART_ARM]),
-        CONF_HOME_PART_ARM: int(user_input[CONF_HOME_PART_ARM]),
-    }
+    options = {key: int(user_input[key]) for key in PART_ARM_OPTIONS.values() if key in user_input}
     if CONF_KEYPAD_ARM_MODE in user_input:
         options[CONF_KEYPAD_ARM_MODE] = user_input[CONF_KEYPAD_ARM_MODE]
     return options
 
 
 def arm_modes_error(options: Mapping[str, Any]) -> str | None:
-    home, night = int(options[CONF_HOME_PART_ARM]), int(options[CONF_NIGHT_PART_ARM])
-    return "same_part_arm" if home and home == night else None
+    used = [int(options[key]) for key in PART_ARM_OPTIONS.values() if int(options.get(key) or 0)]
+    return "same_part_arm" if len(used) != len(set(used)) else None

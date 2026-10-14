@@ -81,11 +81,13 @@ Besides a full arm (**Away**), your panel can have up to three **part arms**, ea
 |---|---|---|
 | Part Arm 1 | Downstairs only, so you can move around upstairs at night | **Night** |
 | Part Arm 2 | Just the garage, or the doors and windows | **Home** |
-| Part Arm 3 | Often not set up | (none) |
+| Part Arm 3 | Often not set up | (none), or **Vacation** / **Custom bypass** |
 
 **Find out what yours cover** (ask your installer, or look at the part-arm settings in Wintex), then give Night and Home only the part arms you actually use. A part arm nobody set up may arm nothing useful, or the wrong zones.
 
-When the panel is part armed from the keypad, Home Assistant shows the mode you matched to that part arm. A part arm you didn't match shows as *Home*.
+**Using all three part arms?** Setup asks about Night and Home only. Afterwards, **Configure → Arm buttons** also lets you give **Vacation** and **Custom bypass** a part arm each, so every part arm has its own button and its own state in automations. Apple Home has no *Custom bypass* (it keeps showing the previous state), so if you use Apple Home, give your part arms Night, Home and Vacation.
+
+When the panel is part armed from the keypad, Home Assistant shows the mode you matched to that part arm. A part arm you didn't match shows as the first of *Home*, *Night* or *Vacation* that no other part arm uses, so it never looks like one you matched, and Apple Home still shows the alarm as armed. The alarm's `part_arm` attribute always says which part arm is set.
 
 You can change these later in **Configure** (see [Options](using.md#options)).
 

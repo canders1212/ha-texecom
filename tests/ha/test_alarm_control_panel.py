@@ -20,6 +20,23 @@ async def call(hass, service: str, code: str | None = None) -> None:
     await hass.services.async_call("alarm_control_panel", service, data, blocking=True)
 
 
+async def test_vacation_and_custom_bypass_use_their_part_arms(hass, fake):
+    """Issue #32: each of the three part arms can have its own button."""
+    options = {"night_part_arm": 1, "home_part_arm": 0, "vacation_part_arm": 2, "custom_bypass_part_arm": 3}
+    entry = await setup_connect(hass, fake, options=options)
+    assert hass.states.get(ALARM).attributes["supported_features"] == 2 | 4 | 16 | 32
+    await call(hass, "alarm_arm_vacation")
+    assert (P.CMD_ARM_AREA, bytes([2, 1])) in fake.commands  # Part Arm 2, area 1
+    await wait_for(lambda: state(hass) == "armed_vacation")
+    await call(hass, "alarm_disarm")
+    await wait_for(lambda: state(hass) == "disarmed")
+    await call(hass, "alarm_arm_custom_bypass")
+    assert (P.CMD_ARM_AREA, bytes([3, 1])) in fake.commands  # Part Arm 3
+    await wait_for(lambda: state(hass) == "armed_custom_bypass")
+    assert hass.states.get(ALARM).attributes["part_arm"] == 3
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_arm_night_away_and_disarm(hass, fake):
     entry = await setup_connect(hass, fake)
     await call(hass, "alarm_arm_night")
