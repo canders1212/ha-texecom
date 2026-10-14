@@ -129,10 +129,29 @@ def test_area_flags_from_a_real_part_arm():
         return P.decode_area_flags(bytes(flags), [1], 24)[1]
 
     common = (16, 25, 29, 31, 32)  # Ready, Force Armable, Bell SCB, Detector Latch, Detector Reset
-    assert decode(*common, 19, 20, 24, 52) == ("in exit", None)  # the exit delay
+    assert decode(*common, 19, 20, 24, 52) == ("in exit", 3)  # the exit delay, arming to Part Arm 3
     assert decode(*common, 21, 24, 52) == ("part armed", 3)  # just armed
     assert decode(*common, 21, 23, 24, 52, 60) == ("part armed", 3)  # a minute later
     assert decode(21, 22, 19) == ("armed", None)  # a stale Exit flag just after a full arm
+
+
+def test_area_flags_say_what_an_exit_delay_is_arming_to():
+    """Read from a Premier Elite 24 (V6.05.03) on 14 Oct 2026, arming at the
+    keypad, where the panel's messages are the same for every mode. In an
+    exit delay the second value is what the area is arming to: a part arm,
+    or 0 for a full arm. Part Arming (24) and the part arm's flag came with
+    Exit (19); a full arm set Full Armed/Exit (63) about 1.5 s later."""
+
+    def decode(*names: int) -> tuple[str, int | None]:
+        flags = bytearray(72)
+        for flag in names:
+            flags[flag] = 1
+        return P.decode_area_flags(bytes(flags), [1], 24)[1]
+
+    assert decode(16, 19, 24, 25, 29, 31, 50) == ("in exit", 1)  # Part Arm 1
+    assert decode(16, 19, 20, 24, 25, 29, 31, 51) == ("in exit", 2)  # Part Arm 2
+    assert decode(16, 19, 25, 29, 31) == ("in exit", None)  # a full arm, 0.7 s in: not known yet
+    assert decode(16, 19, 20, 25, 29, 31, 62, 63) == ("in exit", 0)  # the same, 1.6 s in
 
 
 def test_message_decoding():
@@ -435,6 +454,64 @@ async def test_connecting_while_part_armed_with_part_arming_still_set(fake):
     panel = await make_panel(fake, part_arms={"night": 1, "home": 2})
     try:
         await wait_for(lambda: panel.areas[1].state == ARMED_VACATION and panel.areas[1].part_arm == 3)
+    finally:
+        await panel.stop()
+
+
+async def test_a_keypad_arm_says_what_its_arming_to(fake):
+    """Discussion #38: while arming, the alarm says which mode it's arming
+    to, from the flags (the exit delay's messages don't say)."""
+    from fake_connect_panel import run_command
+
+    panel = await make_panel(fake, part_arms={"night": 1, "home": 2})
+    try:
+        run_command(fake, "area exit part 1")
+        await wait_for(lambda: panel.areas[1].arming_to == ARMED_NIGHT)
+        assert panel.areas[1].state == ARMING
+        run_command(fake, "area off")
+        await wait_for(lambda: panel.areas[1].state == DISARMED)
+        assert panel.areas[1].arming_to is None
+        run_command(fake, "area exit full")
+        await wait_for(lambda: panel.areas[1].arming_to == ARMED_AWAY)
+        run_command(fake, "area armed")
+        await wait_for(lambda: panel.areas[1].state == ARMED_AWAY)
+        assert panel.areas[1].arming_to is None
+    finally:
+        await panel.stop()
+
+
+async def test_the_flags_are_read_again_until_they_say_what_its_arming_to(fake):
+    """A full arm's flag came about 1.5 s after the exit delay started; a
+    panel whose flags never say isn't read over and over."""
+    panel = await make_panel(fake)
+    try:
+        fake.set_area(1)  # the flags don't say yet
+        await wait_for(lambda: panel.areas[1].state == ARMING)
+        await asyncio.sleep(0.8)
+        assert panel.areas[1].arming_to is None
+        fake.part_arms[1] = 0  # now they say: a full arm
+        await wait_for(lambda: panel.areas[1].arming_to == ARMED_AWAY)
+        fake.set_area(0)
+        await wait_for(lambda: panel.areas[1].state == DISARMED)
+        fake.set_area(1)  # and this time they never say
+        await asyncio.sleep(4)
+        reads = sum(1 for cmd, _ in fake.commands if cmd == P.CMD_GET_AREA_FLAGS)
+        await asyncio.sleep(1)
+        assert sum(1 for cmd, _ in fake.commands if cmd == P.CMD_GET_AREA_FLAGS) == reads
+        assert panel.areas[1].arming_to is None
+    finally:
+        await panel.stop()
+
+
+async def test_arming_from_home_assistant_says_what_its_arming_to_at_once(fake):
+    fake.exit_delay = 1
+    panel = await make_panel(fake)
+    try:
+        await panel.arm(1, "night")
+        await wait_for(lambda: panel.areas[1].state == ARMING)
+        assert panel.areas[1].arming_to == ARMED_NIGHT
+        await wait_for(lambda: panel.areas[1].state == ARMED_NIGHT)
+        assert panel.areas[1].arming_to is None
     finally:
         await panel.stop()
 

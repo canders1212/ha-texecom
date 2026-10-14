@@ -37,6 +37,21 @@ async def test_vacation_and_custom_bypass_use_their_part_arms(hass, fake):
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
+async def test_arming_says_what_its_arming_to(hass, fake):
+    """Discussion #38: for automations, while arming."""
+    from fake_connect_panel import run_command
+
+    entry = await setup_connect(hass, fake)
+    assert hass.states.get(ALARM).attributes["arming_to"] is None
+    run_command(fake, "area exit part 1")
+    await wait_for(lambda: state(hass) == "arming")
+    await wait_for(lambda: hass.states.get(ALARM).attributes["arming_to"] == "armed_night")
+    run_command(fake, "area part 1")
+    await wait_for(lambda: state(hass) == "armed_night")
+    assert hass.states.get(ALARM).attributes["arming_to"] is None
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_arm_night_away_and_disarm(hass, fake):
     entry = await setup_connect(hass, fake)
     await call(hass, "alarm_arm_night")

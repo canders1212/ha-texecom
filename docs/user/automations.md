@@ -119,6 +119,7 @@ Every event also has `entry_id`, which says which panel it came from if you have
 
 ## More ideas
 
+- 🌙 **Night routine as soon as Night is set**, before the exit delay ends: trigger on the alarm's `arming_to` attribute (`trigger: state`, `entity_id: alarm_control_panel.texecom_house`, `attribute: arming_to`, `to: armed_night`). It works for keypad arms too.
 - 💡 **Lights on** when the hallway zone sees movement after dark (zones work as motion or door sensors in any automation).
 - 📟 **Keypad message**: trigger when **Keypad display** changes to something like *System Alerts!*.
 - 🔋 **Mains and tamper**: Home Assistant already shows a notification for these (see [Notifications](using.md#notifications)); the blueprint above sends them to your phone too.
