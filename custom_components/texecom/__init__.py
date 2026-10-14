@@ -17,7 +17,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_CREATE_DASHBOARD, CONF_TIME_SYNC, DOMAIN, DRIVER_OPTIONS
-from .dashboard import async_create_dashboard
+from .dashboard import async_create_dashboard, async_remove_dashboard
 from .entity import panel_device_info
 from .factory import create_panel
 from .issues import clear_clock_issue, watch_connection, watch_unrecognised
@@ -78,6 +78,11 @@ async def async_remove_config_entry_device(
     current |= {f"{entry.entry_id}_zone_{number}" for number in panel.zones}
     current |= {f"{entry.entry_id}_area_{number}" for number in panel.areas}
     return not any(domain == DOMAIN and key in current for domain, key in device.identifiers)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> None:
+    """The panel was deleted: delete its Alarm dashboard too."""
+    await async_remove_dashboard(hass, entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> bool:

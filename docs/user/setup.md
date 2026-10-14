@@ -89,7 +89,7 @@ Besides a full arm (**Away**), your panel can have up to three **part arms**, ea
 
 When the panel is part armed from the keypad, Home Assistant shows the mode you matched to that part arm. A part arm you didn't match shows as the first of *Home*, *Night* or *Vacation* that no other part arm uses, so it never looks like one you matched, and Apple Home still shows the alarm as armed. The alarm's `part_arm` attribute always says which part arm is set.
 
-You can change these later in **Configure** (see [Options](using.md#options)).
+You can change these later with the **⚙️ cog** on your panel's row (**Configure**, see [Options](using.md#options)).
 
 ## Coming from Homebridge or texecom2mqtt
 
