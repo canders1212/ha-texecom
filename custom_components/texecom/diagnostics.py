@@ -1,16 +1,16 @@
-"""Diagnostics download (the UDL code and alarm code are redacted)."""
+"""Diagnostics download (the UDL code, alarm code, address and keypad user names are redacted)."""
 
 from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 
 from . import TexecomConfigEntry
-from .const import CONF_ALARM_CODE, CONF_UDL
+from .const import CONF_ALARM_CODE, CONF_UDL, CONF_USER_NAMES
 
 TO_REDACT = {CONF_UDL, CONF_ALARM_CODE, CONF_HOST}
 
@@ -18,10 +18,13 @@ TO_REDACT = {CONF_UDL, CONF_ALARM_CODE, CONF_HOST}
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: TexecomConfigEntry) -> dict[str, Any]:
     panel = entry.runtime_data
     extra = await panel.async_diagnostics() if hasattr(panel, "async_diagnostics") else panel.diagnostics()
+    options = async_redact_data(dict(entry.options), TO_REDACT)
+    if CONF_USER_NAMES in options:  # people's names: keep which users are named, not the names
+        options[CONF_USER_NAMES] = dict.fromkeys(options[CONF_USER_NAMES], REDACTED)
     return {
         "entry": {
             "data": async_redact_data(dict(entry.data), TO_REDACT),
-            "options": async_redact_data(dict(entry.options), TO_REDACT),
+            "options": options,
         },
         "panel": {
             "connected": panel.connected,
