@@ -4,7 +4,7 @@ What the panel and its modules actually do, as seen on a real **Premier Elite 24
 
 **Add to this page** whenever you learn something new on a real panel: what you saw, how, the panel and firmware, and the date. The [live test plan](../testing/live-test-plan.md) lists what's still to find out.
 
-**On this page:** [Texecom Connect](#texecom-connect-smartcom-or-comip) · [Area flags](#area-flags) · [System flags](#system-flags) · [Seen by other projects](#seen-by-other-projects) · [Crestron](#crestron) · [Still unknown](#still-unknown)
+**On this page:** [Texecom Connect](#texecom-connect-smartcom-or-comip) · [Area flags](#area-flags) · [System flags](#system-flags) · [Seen on testers' panels](#seen-on-testers-panels) · [Seen by other projects](#seen-by-other-projects) · [Crestron](#crestron) · [Still unknown](#still-unknown)
 
 ## Texecom Connect (SmartCom or ComIP)
 
@@ -51,7 +51,7 @@ The protocol follows Joseph Heenan's [texecom-connect](https://github.com/davidM
 | Message | Content |
 |---|---|
 | **Zone** | Zone number and a state byte: bits 0–1 secure/active/tamper/short, bit 2 fault, bit 3 failed test, bit 4 **alarmed**, bit 5 manual bypass, bit 6 auto bypass, bit 7 masked |
-| **Area** | Area and state: 0 disarmed, 1 in exit, 2 in entry, 3 armed, 4 part armed, 5 in alarm. **6, 7 and 8** arrive straight after the *part armed* (4) for Part Arm 1, 2 and 3 (5 + the part arm; Part Arm 2 remote and Part Arm 3 at the keypad on 14 Oct 2026): the driver re-reads the area flags instead. On 8 Oct 2026 state 6 came with log entries 113 (*Remote Command*, group 9, parameter 1) and 207 (*Remote Part Arm 1*, group 6). Neither value is in the published lists, so the debug log shows `unknown (6)` |
+| **Area** | Area and state: 0 disarmed, 1 in exit, 2 in entry, 3 armed, 4 part armed, 5 in alarm. **6, 7 and 8** arrive straight after the *part armed* (4) for Part Arm 1, 2 and 3 (5 + the part arm; Part Arm 2 remote and Part Arm 3 at the keypad on 14 Oct 2026): the driver re-reads the area flags instead. A V5.02 panel [didn't send them](#seen-on-testers-panels). On 8 Oct 2026 state 6 came with log entries 113 (*Remote Command*, group 9, parameter 1) and 207 (*Remote Part Arm 1*, group 6). Neither value is in the published lists, so the debug log shows `unknown (6)` |
 | **User** | User number and method (code, tag, code + tag) when someone uses a keypad |
 | **Log** | Event type, group (low 6 bits; bit 6 "communication delayed", bit 7 "communicated"), parameter (a zone or user number), areas, timestamp |
 | **Output** | Output location and state: decoded but not used yet |
@@ -186,6 +186,17 @@ None of these is understood yet, and nothing relies on them. They're candidates 
 - The clock can hold an **impossible date** (day 0, month 0): treated as "not set".
 - The panel keeps local wall-clock time; the integration uses Home Assistant's time zone, not the computer's (a Docker container on UTC would otherwise put the panel an hour out in summer).
 
+## Seen on testers' panels
+
+From diagnostics that users shared (their panels, not this one):
+
+- **No area states 6–8 on V5.02** (Elite 24, V5.02.01, 14 Oct 2026): a Part Arm 2 at the keypad sent *part armed* (4) with log 79 *Part Arm 2*, and nothing after it; a full arm at the keypad sent *armed* (3) with log 43 *Quick Arm* (group 6). There the part arm comes from the log entry or a flag re-read.
+- **The start of an exit delay doesn't say which mode is coming** (same panel): a Part Arm 2 and a full arm from the keypad both began with *in exit* (1) and log 32 *Exit Started* (group 16, parameter 11: keypad 1). Only the messages when the area armed said which.
+- **Log type 127 and a short message `03 e0`** (same panel): when the entry/exit zone (zone 1) opened during the exit delay, the panel sent a two-byte message `03 e0` (type 3 is an *output* message, normally three bytes) and log 127 group 5 *Open*, parameter 1, areas 1 and 2; when the zone closed a second later, log 127 group 6 *Close*. Neither is in Texecom's published lists. Nothing relies on them; the diagnostics list them as unrecognised.
+- **Output messages** (same panel): arming (full or part) set outputs 1, 2 and 4 to state 8, and 17 and 18 to state 3; disarming set them back to 0 and 1.
+- **System flags' last byte** differs: `01` here (V6.05.03), `03` on an Elite 24 V6.06.03 and on the V5.02.01 panel, `00` on an Elite 64 V5.00.03. Meaning unknown.
+- **ComWiFi** listens on port **10002** (Elite 24, V6.06.03).
+
 ## Seen by other projects
 
 Reported by other Texecom projects on their panels, not yet seen on this one. Useful to know, and worth checking (sources in [Other projects](other-projects.md)):
@@ -224,8 +235,8 @@ A COM port set to *Crestron System*: text lines, plus binary UDL (Wintex) frames
 Things to find out on real panels (each is a task in the [live test plan](../testing/live-test-plan.md#part-d--mapping-the-protocol)):
 
 - What **area states 6 and 7** mean exactly, and whether other values exist.
-- **Output messages**: which outputs (bell, strobe, others) report, and what their states mean.
-- **Log event types** not in the tables above, including **type 137** (observed during testing, meaning unknown).
+- **Output messages**: which outputs (bell, strobe, others) report, what their states mean, and what the two-byte `03 e0` is.
+- **Log event types** not in the tables above, including **type 137** (observed during testing, meaning unknown) and **type 127** ([a tester's panel](#seen-on-testers-panels)).
 - Whether a remote **arm is refused** (NAK) with a zone open or a fault present, and what the panel sends then.
 - Commands not used yet that could help: **reading the event log** (to catch up after a reconnect), **user names** (its reply includes the code), **zone bypass**, **outputs**, **the keypad text** (command 14).
 - What the **system flags** (command 10) mean beyond the [first clues](#system-flags), and which **area flags** show tampers and faults that are already there when Home Assistant connects (D11–D13).
