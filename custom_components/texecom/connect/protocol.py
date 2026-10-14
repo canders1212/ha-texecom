@@ -79,6 +79,7 @@ FLAG_INTERNAL_ALARM = 44  # the internal sounders' alarm, e.g. a tamper while di
 FLAG_PART_ARM_1 = 50
 FLAG_PART_ARM_2 = 51
 FLAG_PART_ARM_3 = 52
+FLAG_FULL_ARMED_EXIT = 63  # set during a full arm's exit delay (not a part arm's)
 AREA_FLAGS = (
     FLAG_ALARM,
     FLAG_READY,
@@ -94,6 +95,7 @@ AREA_FLAGS = (
     FLAG_PART_ARM_1,
     FLAG_PART_ARM_2,
     FLAG_PART_ARM_3,
+    FLAG_FULL_ARMED_EXIT,
 )
 
 AREA_STATES = ("disarmed", "in exit", "in entry", "armed", "part armed", "in alarm")
@@ -253,7 +255,10 @@ def decode_zone_state(bits: int) -> ZoneState:
 
 
 def decode_area_flags(flags: bytes, areas: list[int], panel_zones: int | None) -> dict[int, tuple[str, int | None]]:
-    """Each area's (state, part_arm) from a GET_AREA_FLAGS reply starting at flag 0."""
+    """Each area's (state, part_arm) from a GET_AREA_FLAGS reply starting at flag 0.
+
+    In an exit delay, part_arm is what the area is arming to: 1-3 a part
+    arm, 0 a full arm, None if the flags don't say (yet)."""
     size = area_bytes(panel_zones)
 
     def is_set(flag: int, area: int) -> bool:
@@ -262,6 +267,12 @@ def decode_area_flags(flags: bytes, areas: list[int], panel_zones: int | None) -
             return False
         bits = int.from_bytes(flags[offset : offset + size], "little")
         return bool(bits & (1 << (area - 1)))
+
+    def part_arm(area: int) -> int | None:
+        return next(
+            (n for n, f in ((1, FLAG_PART_ARM_1), (2, FLAG_PART_ARM_2), (3, FLAG_PART_ARM_3)) if is_set(f, area)),
+            None,
+        )
 
     result: dict[int, tuple[str, int | None]] = {}
     for area in areas:
@@ -274,13 +285,15 @@ def decode_area_flags(flags: bytes, areas: list[int], panel_zones: int | None) -
             # Armed (21) is clear until the exit delay ends; after it, a real
             # panel left Exit set for a moment after a full arm, and Part Arming
             # set all the time a part arm was armed, so Armed wins.
-            result[area] = ("in exit", None)
+            # Part Arming and the part arm's flag come with Exit; a full arm
+            # sets Full Armed/Exit, about 1.5 s later (seen on a real panel).
+            if is_set(FLAG_PART_ARMING, area):
+                result[area] = ("in exit", part_arm(area))
+            else:
+                result[area] = ("in exit", 0 if is_set(FLAG_FULL_ARMED_EXIT, area) else None)
         elif any(is_set(f, area) for f in (FLAG_ARMED, FLAG_FULL_ARMED, FLAG_PART_ARMED, FLAG_FORCE_ARMED)):
-            part_arm = next(
-                (n for n, f in ((1, FLAG_PART_ARM_1), (2, FLAG_PART_ARM_2), (3, FLAG_PART_ARM_3)) if is_set(f, area)),
-                None,
-            )
-            result[area] = ("part armed" if part_arm else "armed", part_arm)
+            armed_part = part_arm(area)
+            result[area] = ("part armed" if armed_part else "armed", armed_part)
         else:
             result[area] = ("disarmed", None)
     return result

@@ -30,6 +30,7 @@ Home Assistant's own **Overview** picks the alarm up as well: its **Security** s
 - **Changed by** (on the alarm's details) says who or what did it: *Home Assistant*, a keypad user (*User 3*, or their name if you [gave them one](#options)), or for an alarm, the zone that set it off (*Kitchen*).
 - **Arms and disarms at the keypad** show straight away.
 - **Switching mode** (for example Night to Away) shows *Arming…* while the panel switches over; you won't see *Off* in between, so automations that run on *Off* don't fire.
+- **Which mode it's arming to:** while it shows *Arming…*, the alarm's `arming_to` attribute says what it'll be (`armed_away`, `armed_night`, `armed_home`…), whether it was armed here or at a keypad. It's empty the rest of the time, and when the panel doesn't say (with [Crestron](crestron.md), it's only there when Home Assistant armed it).
 
 ## Ready to arm
 
