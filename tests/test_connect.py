@@ -117,6 +117,24 @@ def test_area_flags_decoding():
     assert P.decode_area_flags(bytes(flags), [1], 24)[1] == ("in exit", None)
 
 
+def test_area_flags_from_a_real_part_arm():
+    """Read from a Premier Elite 24 (V6.05.03) on 14 Oct 2026, part arming
+    with Part Arm 3 at the keypad. Part Arming (24) stayed set all the time
+    it was armed: only Armed (21) tells the exit delay and armed apart."""
+
+    def decode(*names: int) -> tuple[str, int | None]:
+        flags = bytearray(72)
+        for flag in names:
+            flags[flag] = 1
+        return P.decode_area_flags(bytes(flags), [1], 24)[1]
+
+    common = (16, 25, 29, 31, 32)  # Ready, Force Armable, Bell SCB, Detector Latch, Detector Reset
+    assert decode(*common, 19, 20, 24, 52) == ("in exit", None)  # the exit delay
+    assert decode(*common, 21, 24, 52) == ("part armed", 3)  # just armed
+    assert decode(*common, 21, 23, 24, 52, 60) == ("part armed", 3)  # a minute later
+    assert decode(21, 22, 19) == ("armed", None)  # a stale Exit flag just after a full arm
+
+
 def test_message_decoding():
     zone = P.decode_message(bytes([P.MSG_ZONE, 3, 0x21]))
     assert zone["zone"] == 3 and zone["state"].active and zone["state"].manual_bypass
@@ -405,6 +423,18 @@ async def test_all_three_part_arms_can_have_a_button(fake):
         await wait_for(lambda: panel.areas[1].state == ARMED_HOME and panel.areas[1].part_arm == 3)
         with pytest.raises(PanelError, match="custom_bypass isn't set up"):
             await panel.arm(1, "custom_bypass")
+    finally:
+        await panel.stop()
+
+
+async def test_connecting_while_part_armed_with_part_arming_still_set(fake):
+    """Seen on a real panel: connecting while part armed showed Arming… until
+    the next disarm, because Part Arming stays set (14 Oct 2026)."""
+    fake.sticky_part_arming = True
+    fake.set_area(4, 3)
+    panel = await make_panel(fake, part_arms={"night": 1, "home": 2})
+    try:
+        await wait_for(lambda: panel.areas[1].state == ARMED_VACATION and panel.areas[1].part_arm == 3)
     finally:
         await panel.stop()
 
