@@ -165,7 +165,7 @@ async def test_filling_in_names_when_the_panel_is_busy(hass, fake):
     fake.users = {}
     result = await options(hass, entry, "user_names", user_names="3 = Alex", read_names=True)
     assert result["errors"] == {"base": "no_user_names"}
-    assert "user_names" not in entry.options  # nothing saved
+    assert entry.options["user_names"] == {}  # nothing saved
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 

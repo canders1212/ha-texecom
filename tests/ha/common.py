@@ -35,8 +35,12 @@ async def layout_of(fake: FakeConnectPanel) -> dict:
     return layout_to_data(info, zones, areas)
 
 
-async def setup_connect(hass, fake: FakeConnectPanel, options: dict | None = None, data: dict | None = None):
-    """Adds and sets up a Connect entry for the fake panel; waits until connected."""
+async def setup_connect(
+    hass, fake: FakeConnectPanel, options: dict | None = None, data: dict | None = None, *, fill_names: bool = False
+):
+    """Adds and sets up a Connect entry for the fake panel; waits until connected.
+    Unless fill_names, the names for keypad users count as already given (an
+    empty list), so the panel's aren't filled in while a test runs."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Texecom Premier Elite 24",
@@ -49,7 +53,12 @@ async def setup_connect(hass, fake: FakeConnectPanel, options: dict | None = Non
             **(await layout_of(fake)),
             **(data or {}),
         },
-        options={"night_part_arm": 1, "home_part_arm": 0, **(options or {})},
+        options={
+            "night_part_arm": 1,
+            "home_part_arm": 0,
+            **({} if fill_names else {"user_names": {}}),
+            **(options or {}),
+        },
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)

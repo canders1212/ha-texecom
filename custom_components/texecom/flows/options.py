@@ -49,13 +49,12 @@ from ..const import (
 from ..dashboard import async_create_dashboard
 from ..factory import layout_to_data
 from ..panel import PanelError
-from ..users import format_user_names, parse_user_names
+from ..users import format_user_names, panel_user_names, parse_user_names
 from .validation import UDL_SELECTOR, arm_mode_options, arm_modes_error, arm_modes_schema
 
 _LOGGER = logging.getLogger(__name__)
 
 READ_NAMES = "read_names"  # on the names form, not an option: fills in the panel's names
-ENGINEER_USER, ENGINEER_NAME = "0", "Engineer"
 
 
 class TexecomOptionsFlow(OptionsFlow):
@@ -153,10 +152,7 @@ class TexecomOptionsFlow(OptionsFlow):
             return format_user_names(names), "read_names_failed"
         if not from_panel:
             return format_user_names(names), "no_user_names"
-        # The engineer code shows as user 0 in keypad events, but has no user
-        # record to read (the panel refuses user 0), so it's named here.
-        found = {ENGINEER_USER: ENGINEER_NAME, **{str(n): name for n, name in from_panel.items()}}
-        return format_user_names({**found, **names}), None
+        return format_user_names({**panel_user_names(from_panel), **names}), None
 
     async def async_step_notices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
