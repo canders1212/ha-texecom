@@ -87,7 +87,7 @@ Besides a full arm (**Away**), your panel can have up to three **part arms**, ea
 
 When the panel is part armed from the keypad, Home Assistant shows the mode you matched to that part arm. A part arm you didn't match shows as *Home*.
 
-You can change these later in **Configure** (see [Options](using.md#options)).
+You can change these later with the **⚙️ cog** on your panel's row (**Configure**, see [Options](using.md#options)).
 
 ## Coming from Homebridge or texecom2mqtt
 
