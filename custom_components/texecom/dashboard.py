@@ -170,6 +170,55 @@ async def async_create_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> str
     return url_path
 
 
+async def async_update_alarm_buttons(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Dashboards made before 0.2.12 listed only the modes the alarm had then:
+    lists every mode on this panel's alarm cards so they follow Configure →
+    Arm buttons, keeping everything else the user changed. Lists the user
+    reordered or added to are left alone."""
+    try:
+        dashboards = hass.data["lovelace"].dashboards
+    except (KeyError, AttributeError):
+        return
+    registry = er.async_get(hass)
+    alarms = {
+        e.entity_id
+        for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+        if e.domain == "alarm_control_panel"
+    }
+    for url_path in (f"{URL_PATH}-{entry.entry_id[-6:].lower()}", URL_PATH):
+        if (dashboard := dashboards.get(url_path)) is None:
+            continue
+        try:
+            config = await dashboard.async_load(False)
+        except HomeAssistantError:  # never saved
+            continue
+        if _list_every_mode(config, alarms):
+            await dashboard.async_save(config)
+            _LOGGER.info("The Alarm dashboard's buttons now follow the arm buttons (/%s)", url_path)
+
+
+def _list_every_mode(node: Any, alarms: set[str]) -> bool:
+    """Lists every mode on the alarm-modes feature of tiles showing one of
+    `alarms`, anywhere in a dashboard; True if anything changed."""
+    changed = False
+    if isinstance(node, dict):
+        if node.get("type") == "tile" and node.get("entity") in alarms:
+            for feature in node.get("features") or []:
+                if not isinstance(feature, dict) or feature.get("type") != "alarm-modes":
+                    continue
+                modes = feature.get("modes") or []
+                # Only lists as this integration made them: some modes, in order.
+                if modes != MODES and modes == [m for m in MODES if m in modes]:
+                    feature["modes"] = list(MODES)
+                    changed = True
+        for value in node.values():
+            changed |= _list_every_mode(value, alarms)
+    elif isinstance(node, list):
+        for item in node:
+            changed |= _list_every_mode(item, alarms)
+    return changed
+
+
 async def async_remove_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Deletes this panel's dashboard when the panel is deleted, so no "Alarm"
     is left in the sidebar with every entity missing."""
