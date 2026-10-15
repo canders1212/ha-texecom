@@ -36,7 +36,7 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 3. **Add the integration**: click below, choose **Texecom Connect**, and enter the address and UDL code (leave the port at 10001).
 
    [![Open your Home Assistant and start setting up Texecom](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=texecom)
-4. **Choose your arm modes**: which *part arm* **Night** and **Home** use (or *Not used*), keep **Add an Alarm dashboard** ticked, and click **Submit**. Done 🎉
+4. **Choose your arm modes**: which *part arm* **Night** and **Home** use (or *Not used*), keep **Add an Alarm dashboard** ticked, and click **Submit**, then **Finish**. Done 🎉
 
 **[Step-by-step guide with pictures →](https://github.com/metaljay/ha-texecom/blob/main/docs/user/setup.md)**
 
