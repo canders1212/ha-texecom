@@ -3,8 +3,8 @@
 - "Alarm not set": the panel didn't arm because zones were active when the
   exit time ended. It names the zones, and goes once that area is armed.
 - "Alarm panel on battery" while the panel has no mains power, and "Alarm
-  tamper" while a tamper is open (each can be turned off in Options). They
-  follow the Mains power and Tamper sensors."""
+  tamper" while a tamper is open, the panel's own or a zone's (each can be
+  turned off in Options). They follow the Mains power and Tamper sensors."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback
 
 from .const import CONF_NOTIFY_MAINS, CONF_NOTIFY_TAMPER, DOMAIN, EVENT
-from .panel import MAINS_FAULTS, TexecomPanel
+from .panel import MAINS_FAULTS, TexecomPanel, nice_name
 
 ARM_FAILED_WINDOW = 60.0  # zones reported within this of each other are one failed arm
 
@@ -41,6 +41,7 @@ TAMPER_PLACES = {
         "(often a detector's cover or the panel's lid), and entering a code there silences it"
     ),
 }
+ZONE_TAMPER_PLACE = "its detector's cover is open, or its wiring is damaged"
 
 
 def arm_failed_notifier(hass: HomeAssistant, entry: ConfigEntry) -> Callable[[dict[str, Any]], None]:
@@ -134,7 +135,17 @@ def watch_conditions(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
         if "power" in panel.extra or faults & MAINS_FAULTS:
             on_battery = bool(faults & MAINS_FAULTS) and entry.options.get(CONF_NOTIFY_MAINS, True)
             show("mains", "Alarm panel on battery", MAINS_MESSAGE if on_battery else None)
-        tampers = sorted(panel.extra.get("tampers", ())) if entry.options.get(CONF_NOTIFY_TAMPER, True) else []
+        tampers: list[str] = []
+        if entry.options.get(CONF_NOTIFY_TAMPER, True):
+            tampers = [
+                f"**{name}**: {TAMPER_PLACES[name]}" if name in TAMPER_PLACES else f"**{name}**"
+                for name in sorted(panel.extra.get("tampers", ()))
+            ]
+            tampers += [
+                f"**{nice_name(zone.name)}**: {ZONE_TAMPER_PLACE}"
+                for _number, zone in sorted(panel.zones.items())
+                if zone.tampered
+            ]
         show("tamper", "Alarm tamper", _tamper_message(tampers) if tampers else None)
 
     remove_listener = panel.add_listener(check)
@@ -148,7 +159,4 @@ def watch_conditions(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
 
 
 def _tamper_message(tampers: list[str]) -> str:
-    where = "; ".join(
-        f"**{name}**: {TAMPER_PLACES[name]}" if name in TAMPER_PLACES else f"**{name}**" for name in tampers
-    )
-    return f"The alarm panel reports a tamper. {where}. This notice goes when it's put right."
+    return f"The alarm panel reports a tamper. {'; '.join(tampers)}. This notice goes when it's put right."

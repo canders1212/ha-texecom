@@ -68,6 +68,13 @@ class TexecomAreaPanel(TexecomEntity, AlarmControlPanelEntity):
         return bool(self._code) and self._entry.options.get(CONF_CODE_ARM_REQUIRED, False)
 
     @property
+    def available(self) -> bool:
+        # Unavailable rather than "unknown" until the panel says what state
+        # the area is in (a moment after connecting), so the activity list
+        # doesn't show "Unknown" each time Home Assistant starts.
+        return super().available and self.panel.areas[self.number].known
+
+    @property
     def alarm_state(self) -> AlarmControlPanelState | None:
         area = self.panel.areas[self.number]
         return AlarmControlPanelState(area.state) if area.known else None

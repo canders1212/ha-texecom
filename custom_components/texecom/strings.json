@@ -11,7 +11,7 @@
       },
       "connect": {
         "title": "Your SmartCom",
-        "description": "Find the SmartCom in your router's list of devices and reserve its address so it never changes.\n\nThe SmartCom takes one connection at a time, so the Texecom app can't connect while Home Assistant is. Your alarm, and the app's alarm notifications, work as before. If Homebridge or texecom2mqtt use the SmartCom, turn them off first.\n\nConnecting can take up to a minute.\n\nNeed help? See the [setup guide]({help}).",
+        "description": "Your SmartCom's address is in your router's list of devices. Reserve it there, so it never changes.\n\nThe SmartCom takes one connection at a time: while Home Assistant is connected, the Texecom app can't be (your alarm and its notifications carry on as normal). Turn off Homebridge or texecom2mqtt first if they use it.\n\nNeed help? See the [setup guide]({help}).",
         "data": {
           "host": "IP address",
           "port": "Port",
@@ -66,7 +66,7 @@
       },
       "arm_modes": {
         "title": "Found your panel",
-        "description": "**Areas** (parts of the system you arm separately, usually just one): {areas}\n**Zones:** {zones}\n\n**'Away'** always arms the whole alarm. Your installer may also have set up **part arms**, which leave some zones off: for example, Part Arm 1 at night, so you can move around upstairs while downstairs is armed.\n\nChoose the part arm behind **'Night'** and **'Home'**, or *'Not used'* to hide that button. Using all three part arms? Add *Vacation* and *Custom bypass* buttons later, in the integration's options.\n\nUnsure? Ask your installer, check which zones each part arm leaves off in Wintex, or see [part arms explained]({help}).",
+        "description": "**Areas:** {areas}\n**Zones:** {zones}\n\n**'Away'** arms everything. **'Night'** and **'Home'** can each use one of the panel's **part arms**, which leave some zones off (upstairs at night, say). Choose one for each, or *'Not used'* to hide the button. You can change this, or add *Vacation* and *Custom bypass* buttons, later in the options.\n\nUnsure? Ask your installer, or see [part arms explained]({help}).",
         "data": {
           "night_part_arm": "'Night' uses",
           "home_part_arm": "'Home' uses",
@@ -122,7 +122,7 @@
         },
         "data_description": {
           "port": "Leave at 10001 unless your installer changed it.",
-          "udl": "The panel's remote-access code (not your keypad code). Texecom's default is 1234, and most panels keep it."
+          "udl": "Leave empty to keep the current code. Only needed if the panel's remote-access code (not your keypad code) changed."
         }
       },
       "connect_check": {
@@ -253,7 +253,7 @@
       "no_user_names": "The panel has no named users. Type the names in instead."
     },
     "abort": {
-      "rediscovered": "Read the panel again. Zones in use: {zones}. Areas: {areas}. Home Assistant reconnects to use them, which can take up to a minute.",
+      "rediscovered": "Read the panel again. Zones in use: {zones}. Areas: {areas}. Home Assistant reconnects to use them, which can take up to a minute. New zones join the Alarm dashboard when you refresh it (**Create or refresh the Alarm dashboard**).",
       "rediscover_failed": "Couldn't read the panel just now (it may be busy, e.g. reporting an alarm). Try again in a minute.",
       "dashboard_created": "The Alarm dashboard is ready: it's in the sidebar.",
       "dashboard_failed": "Couldn't create the dashboard on this version of Home Assistant. [Build the dashboard yourself]({help}) has a version you can paste in."

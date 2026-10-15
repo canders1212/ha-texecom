@@ -97,6 +97,8 @@ class ReauthReconfigureSteps(ConfigFlow):
         is_serial = data.get(CONF_CONNECTION) == CONNECTION_SERIAL
         if user_input is not None:
             udl = (user_input.get(CONF_UDL) or "").strip()
+            if is_connect and not udl:
+                udl = data[CONF_UDL]  # left empty: keep the code it has
             updates: dict[str, Any] = {CONF_UDL: udl or None}
             if is_serial:
                 updates[CONF_SERIAL_DEVICE] = user_input[CONF_SERIAL_DEVICE].strip()
@@ -139,8 +141,7 @@ class ReauthReconfigureSteps(ConfigFlow):
         else:
             fields[vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, ""))] = str
             fields[vol.Required(CONF_PORT, default=defaults.get(CONF_PORT))] = PORT_SELECTOR
-        udl_key = vol.Required(CONF_UDL) if is_connect else vol.Optional(CONF_UDL)
-        fields[udl_key] = UDL_SELECTOR
+        fields[vol.Optional(CONF_UDL)] = UDL_SELECTOR
         return self.async_show_form(
             step_id="reconfigure_connect" if is_connect else "reconfigure",
             data_schema=vol.Schema(fields),

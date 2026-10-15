@@ -66,6 +66,32 @@ def clear_clock_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
     ir.async_delete_issue(hass, DOMAIN, f"panel_clock_{entry.entry_id}")
 
 
+# The usual reasons a connection fails, in plain words for the notice (the
+# full error is in the log and the diagnostics). First match wins.
+PLAIN_REASONS = (
+    ("UDL code", None),  # already plain
+    ("Connect call failed", "something at that address turned the connection away"),
+    ("refused", "something at that address turned the connection away"),
+    ("()", "nothing answers at that address"),  # timed out
+    ("timed out", "nothing answers at that address"),
+    ("No route to host", "nothing answers at that address"),
+    ("unreachable", "nothing answers at that address"),
+    ("Host is down", "nothing answers at that address"),
+    ("not known", "that name isn't known on the network"),
+    ("nodename nor servname", "that name isn't known on the network"),
+)
+
+
+def plain_reason(error: str | None) -> str:
+    """Why the panel can't be reached, in plain words where the error is a usual one."""
+    if not error:
+        return "no reply"
+    for words, plain in PLAIN_REASONS:
+        if words in error:
+            return plain or error
+    return error
+
+
 def watch_connection(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPanel):
     """Raises a Repairs notice when the panel has been unreachable for a while
     (e.g. the SmartCom's address changed), and clears it once connected."""
@@ -92,7 +118,7 @@ def watch_connection(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
                 "name": entry.title,
                 "address": address,
                 "minutes": str(round(minutes)),
-                "error": getattr(panel, "last_error", None) or "no reply",
+                "error": plain_reason(getattr(panel, "last_error", None)),
                 "help": HELP_OFFLINE,
             },
         )

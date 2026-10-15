@@ -7,8 +7,8 @@
 | Device | What it has |
 |---|---|
 | **House Alarm** (one per area, named after it) | The alarm: arm and disarm, and its state. **Ready to arm** says whether it would set now |
-| **Premier Elite 24 panel** (your panel's size) | **Panel connection**, **Mains power**, **Problem**, **Tamper**, **Keypad display**, battery and panel voltages (current readings are there too, switched off until you want them) |
-| One device per zone, e.g. **Front Door** | Whether the zone is open or sees movement. Each also has a **Tamper** sensor, switched off until you want it |
+| **Premier Elite 24 panel** (your panel's size) | **Panel connection**, **Mains power**, **Problem**, **Tamper**, **Keypad display**, battery and panel voltages and currents |
+| One device per zone, e.g. **Front Door** | Whether the zone is open or sees movement, and its **Tamper** (for detectors that report their own tamper, such as wireless ones; most wired detectors share one tamper circuit, shown on the panel's **Tamper**) |
 
 Entity IDs start with `texecom_`, e.g. `alarm_control_panel.texecom_house` and `binary_sensor.texecom_front_door`, so they're easy to find. They don't change if you rename things in Home Assistant.
 
@@ -47,13 +47,13 @@ It's the panel's own answer, checked a moment after doors and sensors change whi
 
 If you left the box ticked during setup, **Alarm** is in the sidebar: the arm buttons, **Ready to arm**, the last day's activity, panel health and every zone grouped by type. It's built from Home Assistant's own cards, so you can edit it like any dashboard.
 
-To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it.
+Its arm buttons follow **Configure → Arm buttons** by themselves. To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it. (A dashboard made before version 0.2.10 keeps the buttons it was made with until you refresh it once.)
 
 ## Options
 
 Open **Settings → Devices & services → Texecom**, then the **⚙️ cog** on your panel's row (Home Assistant calls it *Configure*; *Reconfigure*, in the ⋮ menu, only changes the connection), and pick what to change:
 
-<img src="../images/options.png" width="420" alt="The Texecom options menu: Night and Home buttons, Home Assistant alarm code, Names for keypad users, Notifications, Panel clock, Read zones and areas from the panel again, Create or refresh the Alarm dashboard">
+<img src="../images/options.png" width="420" alt="The Texecom options menu: Arm buttons, Home Assistant alarm code, Names for keypad users, Notifications, Panel clock, Read zones and areas from the panel again, Create or refresh the Alarm dashboard">
 
 | In the menu | What it does |
 |---|---|
@@ -78,7 +78,7 @@ Besides the **Alarm not set** notification (the alarm couldn't arm because a zon
 | Notification | While | Goes when |
 |---|---|---|
 | **Alarm panel on battery** | The panel has lost its mains power | The mains is back |
-| **Alarm tamper** | A tamper is open, with what to check (e.g. *the panel's lid is open*, or *a detector's cover is open*), or the panel has set off its internal sounders without saying why (*Internal Alarm*) | It's closed again (*Internal Alarm*: a code has been entered at the keypad) |
+| **Alarm tamper** | A tamper is open, with what to check (e.g. *the panel's lid is open*, *a detector's cover is open*, or the zone, for a detector that reports its own tamper), or the panel has set off its internal sounders without saying why (*Internal Alarm*) | It's closed again (*Internal Alarm*: a code has been entered at the keypad) |
 
 <img src="../images/notifications.png" width="420" alt="Home Assistant's notifications: Alarm not set (Kitchen was active when the exit time ended), Alarm panel on battery, and Alarm tamper (the panel's lid is open)">
 
@@ -120,7 +120,7 @@ The Home app can't ask for a code, and HomeKit Bridge only passes one on if it's
 - 🚨 **When the alarm goes off**, the panel drops the connection for about a minute to send its own alarm report through the SmartCom. The alarm and zones **keep showing their last state** (e.g. *Alarm!*) meanwhile, so dashboards and the Home app don't go blank; **Panel connection** shows the link itself. Home Assistant reconnects and catches up by itself.
 - 🔁 **It reconnects by itself** after a power cut, a router restart or a dropped connection, and reads the panel's state again so nothing is missed. After Home Assistant restarts, the SmartCom can take about a minute to let it back in.
 - 🔌 **Mains power** turns off as soon as the panel reports a mains failure, and **Problem** lists any fault the panel reports (e.g. *AC Fail*, *Low Battery*). The panel doesn't report the mains coming back, so Home Assistant checks the power readings every 30 seconds instead.
-- 🔧 **Tamper** turns on while the panel's lid, a keypad, the bell box or a detector is open, and says which. Most installs wire every detector's tamper switch to one shared circuit, so it can't say *which* detector: that shows as *Auxiliary Tamper*. The panel doesn't always report a tamper: if it sets off its internal sounders while the alarm is off and doesn't say why, Tamper shows *Internal Alarm* until a code is entered at the keypad.
+- 🔧 **Tamper** turns on while the panel's lid, a keypad, the bell box or a detector is open, and says which. Most installs wire every detector's tamper switch to one shared circuit, so it can't say *which* detector: that shows as *Auxiliary Tamper*. A detector that reports its own tamper (a wireless one, say) shows on its zone's **Tamper** instead. The panel doesn't always report a tamper: if it sets off its internal sounders while the alarm is off and doesn't say why, Tamper shows *Internal Alarm* until a code is entered at the keypad.
 - 🕐 **The panel clock** resets if the panel loses all power (mains and battery). Home Assistant notices and offers to fix it (see [Troubleshooting](troubleshooting.md#the-panel-clock-is-wrong)).
 - 📟 **Keypad display** shows what the keypads say (e.g. *System Alerts!*), without the clock.
 
@@ -148,7 +148,7 @@ views:
             features_position: bottom
             features:
               - type: alarm-modes
-                modes: [armed_away, armed_night, disarmed]
+                modes: [armed_away, armed_night, armed_home, armed_vacation, armed_custom_bypass, disarmed]
             grid_options:
               columns: full
           - type: logbook

@@ -115,7 +115,6 @@ class TexecomZoneSensor(TexecomBinarySensor):
 class TexecomZoneTamperSensor(TexecomBinarySensor):
     _attr_device_class = BinarySensorDeviceClass.TAMPER
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_entity_registry_enabled_default = False
     _attr_translation_key = "zone_tamper"
 
     def __init__(self, entry: TexecomConfigEntry, panel: TexecomPanel, number: int, device: DeviceInfo) -> None:
