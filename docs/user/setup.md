@@ -62,7 +62,7 @@ Home Assistant shows what it found: your **areas** (usually just one) and your *
 - **'Night'** and **'Home'** each use one of the panel's **part arms**, which arm only some zones. Choose which part arm each uses, or *'Not used'* to hide that button. Not sure? See [Part arms explained](#part-arms-explained).
 - Leave **Add an 'Alarm' dashboard to the sidebar** ticked.
 
-Click **Submit**. That's it 🎉
+Click **Submit**. Home Assistant then lists the devices it added (the panel, the alarm and each zone), where you can rename them or put them in rooms. Zones named after a room you already have are put there for you. Click **Finish**. That's it 🎉
 
 Your area (named by your installer, e.g. *House*) is now **the alarm**: a device called *House Alarm*. The panel itself appears as *Premier Elite 24 panel* (with your panel's size), and each zone is its own device.
 
