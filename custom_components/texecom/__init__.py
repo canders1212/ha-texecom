@@ -21,7 +21,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import CONF_CREATE_DASHBOARD, CONF_PROTOCOL, CONF_TIME_SYNC, DOMAIN, DRIVER_OPTIONS, PROTOCOL_CONNECT
-from .dashboard import async_create_dashboard, async_remove_dashboard
+from .dashboard import async_create_dashboard, async_remove_dashboard, async_update_alarm_buttons
 from .entity import panel_device_info
 from .factory import create_panel
 from .issues import clear_clock_issue, watch_connection, watch_unrecognised
@@ -35,11 +35,12 @@ type TexecomConfigEntry = ConfigEntry[TexecomPanel]
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> bool:
-    """Gives entries made before 0.2.11 what new setups start with, where the
-    user hasn't chosen otherwise: the sensors that used to be off by default
-    (zone tampers, currents), and Keep the panel clock right (Connect).
-    Switching entities on makes Home Assistant reload the entry once, about
-    half a minute later."""
+    """Gives older entries, once, what new setups start with, where the user
+    hasn't chosen otherwise (while in beta, new defaults reach existing users).
+    2 (0.2.11): the sensors that used to be off by default (zone tampers,
+    currents), and Keep the panel clock right (Connect). Switching entities on
+    makes Home Assistant reload the entry once, about half a minute later.
+    3 (0.2.12): the Alarm dashboard's buttons follow Configure → Arm buttons."""
     if entry.version == 1 and entry.minor_version < 2:
         registry = er.async_get(hass)
         for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
@@ -49,6 +50,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: TexecomConfigEntry) ->
         if entry.data[CONF_PROTOCOL] == PROTOCOL_CONNECT:
             options.setdefault(CONF_TIME_SYNC, True)
         hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
+    if entry.version == 1 and entry.minor_version < 3:
+        await async_update_alarm_buttons(hass, entry)
+        hass.config_entries.async_update_entry(entry, minor_version=3)
     return True
 
 
