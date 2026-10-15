@@ -5,7 +5,9 @@ Setting up and unloading a config entry. The panel driver is built in
 factory.py; the notices it raises are in notifications.py and issues.py.
 Changing an option the driver uses reloads the entry; the others apply at
 once. The names for keypad users are filled in from the panel when it first
-connects (users.py). A zone or area the panel no longer has can have its device deleted."""
+connects (users.py). Entries made before 0.2.11 get its defaults once
+(async_migrate_entry). A zone or area the panel no longer has can have its
+device deleted."""
 
 from __future__ import annotations
 
@@ -16,8 +18,9 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_CREATE_DASHBOARD, CONF_TIME_SYNC, DOMAIN, DRIVER_OPTIONS
+from .const import CONF_CREATE_DASHBOARD, CONF_PROTOCOL, CONF_TIME_SYNC, DOMAIN, DRIVER_OPTIONS, PROTOCOL_CONNECT
 from .dashboard import async_create_dashboard, async_remove_dashboard
 from .entity import panel_device_info
 from .factory import create_panel
@@ -29,6 +32,24 @@ from .users import fill_in_names_once
 PLATFORMS = [Platform.ALARM_CONTROL_PANEL, Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type TexecomConfigEntry = ConfigEntry[TexecomPanel]
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> bool:
+    """Gives entries made before 0.2.11 what new setups start with, where the
+    user hasn't chosen otherwise: the sensors that used to be off by default
+    (zone tampers, currents), and Keep the panel clock right (Connect).
+    Switching entities on makes Home Assistant reload the entry once, about
+    half a minute later."""
+    if entry.version == 1 and entry.minor_version < 2:
+        registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if entity.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+                registry.async_update_entity(entity.entity_id, disabled_by=None)
+        options = dict(entry.options)
+        if entry.data[CONF_PROTOCOL] == PROTOCOL_CONNECT:
+            options.setdefault(CONF_TIME_SYNC, True)
+        hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> bool:

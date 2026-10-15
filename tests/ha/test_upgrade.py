@@ -183,3 +183,70 @@ async def test_a_v0_1_0_crestron_setup_loads_unchanged(hass, port):
     assert_entities_kept(hass, entry, V0_1_0_CRESTRON_ENTITIES)
     await assert_options_screens_open(hass, entry, ["arm_modes", "alarm_code", "status_poll"])
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+# ─── Saved by v0.2.10 (and earlier): what's turned on when upgrading ────────
+
+# Options as a v0.2.10 setup saved them when the clock screen was never opened.
+V0_2_10_CONNECT_OPTIONS = {"night_part_arm": 1, "home_part_arm": 0, "user_names": {"3": "Sam"}}
+
+
+async def test_upgrading_turns_on_what_new_setups_get(hass, fake):
+    """Entries made before 0.2.11 get what new setups start with: the sensors
+    that were off by default, and Keep the panel clock right. What the user
+    turned off themselves stays off."""
+    data = {**V0_1_0_CONNECT_DATA, "port": fake.port}
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Texecom Premier Elite 24",
+        unique_id=f"127.0.0.1:{fake.port}",
+        data=data,
+        options=V0_2_10_CONNECT_OPTIONS,
+        version=1,
+        minor_version=1,
+    )
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    off_by_default = registry.async_get_or_create(
+        "binary_sensor",
+        DOMAIN,
+        f"{entry.entry_id}_zone_1_tamper",
+        config_entry=entry,
+        suggested_object_id="texecom_front_door_tamper",
+        disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+    )
+    off_by_user = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{entry.entry_id}_battery_current",
+        config_entry=entry,
+        suggested_object_id="texecom_battery_current",
+        disabled_by=er.RegistryEntryDisabler.USER,
+    )
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await wait_for(lambda: entry.runtime_data.connected)
+
+    assert entry.minor_version == 2
+    assert dict(entry.data) == data
+    assert dict(entry.options) == {**V0_2_10_CONNECT_OPTIONS, "time_sync": True}
+    assert registry.async_get(off_by_default.entity_id).disabled_by is None
+    assert registry.async_get(off_by_user.entity_id).disabled_by is er.RegistryEntryDisabler.USER
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_upgrading_keeps_a_clock_turned_off(hass, fake):
+    options = {**V0_2_10_CONNECT_OPTIONS, "time_sync": False}
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=f"127.0.0.1:{fake.port}",
+        data={**V0_1_0_CONNECT_DATA, "port": fake.port},
+        options=options,
+        minor_version=1,
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.minor_version == 2 and dict(entry.options) == options
+    assert await hass.config_entries.async_unload(entry.entry_id)

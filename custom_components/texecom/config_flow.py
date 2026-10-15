@@ -24,6 +24,7 @@ from .flows.validation import arm_mode_options, arm_modes_error, arm_modes_schem
 
 class TexecomConfigFlow(ConnectSteps, CrestronSteps, ReauthReconfigureSteps, ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    MINOR_VERSION = 2  # 2: made with 0.2.11's defaults (see async_migrate_entry)
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
