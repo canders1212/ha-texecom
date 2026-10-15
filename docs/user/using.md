@@ -47,7 +47,7 @@ It's the panel's own answer, checked a moment after doors and sensors change whi
 
 If you left the box ticked during setup, **Alarm** is in the sidebar: the arm buttons, **Ready to arm**, the last day's activity, panel health and every zone grouped by type. It's built from Home Assistant's own cards, so you can edit it like any dashboard.
 
-To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it.
+Its arm buttons follow **Configure → Arm buttons** by themselves. To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it. (A dashboard made before version 0.2.10 keeps the buttons it was made with until you refresh it once.)
 
 ## Options
 
@@ -148,7 +148,7 @@ views:
             features_position: bottom
             features:
               - type: alarm-modes
-                modes: [armed_away, armed_night, disarmed]
+                modes: [armed_away, armed_night, armed_home, armed_vacation, armed_custom_bypass, disarmed]
             grid_options:
               columns: full
           - type: logbook
