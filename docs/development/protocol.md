@@ -189,6 +189,7 @@ None of these is understood yet, and nothing relies on them. They're candidates 
 - A **total power loss** (mains and battery) reset the clock to **31 Oct 2023**.
 - The clock can hold an **impossible date** (day 0, month 0): treated as "not set".
 - The panel keeps local wall-clock time; the integration uses Home Assistant's time zone, not the computer's (a Docker container on UTC would otherwise put the panel an hour out in summer).
+- **The SmartCom can correct the clock itself, but only through the Texecom Cloud.** Texecom's SmartCom installation guide (INS760EN-8) says the cloud service uses an NTP server for synchronisation, and that setting a panel up for Texecom Connect programs its reporting numbers with ports that, among other things, correct the clock for the country of installation. Panels not set up for the cloud (like the test panel) get no correction: its clock was 7 s ahead on 12 Oct 2026 and 43 s behind on 14 Oct. Whether the cloud's correction still happens while Home Assistant holds the SmartCom's session is untested. Clock sync is on for new setups from 0.2.11: it only writes when the clock is more than a minute out, so it leaves a cloud-corrected clock alone.
 
 ## Seen on testers' panels
 
