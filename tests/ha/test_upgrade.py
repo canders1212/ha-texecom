@@ -17,6 +17,7 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.texecom.config_flow import TexecomConfigFlow
 from custom_components.texecom.const import DOMAIN
 
 from .common import UDL, wait_for
@@ -228,7 +229,7 @@ async def test_upgrading_turns_on_what_new_setups_get(hass, fake):
     await hass.async_block_till_done()
     await wait_for(lambda: entry.runtime_data.connected)
 
-    assert entry.minor_version == 2
+    assert entry.minor_version == TexecomConfigFlow.MINOR_VERSION
     assert dict(entry.data) == data
     assert dict(entry.options) == {**V0_2_10_CONNECT_OPTIONS, "time_sync": True}
     assert registry.async_get(off_by_default.entity_id).disabled_by is None
@@ -248,5 +249,5 @@ async def test_upgrading_keeps_a_clock_turned_off(hass, fake):
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    assert entry.minor_version == 2 and dict(entry.options) == options
+    assert entry.minor_version == TexecomConfigFlow.MINOR_VERSION and dict(entry.options) == options
     assert await hass.config_entries.async_unload(entry.entry_id)

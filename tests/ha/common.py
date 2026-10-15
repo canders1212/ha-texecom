@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.texecom.config_flow import TexecomConfigFlow
 from custom_components.texecom.connect import discovery as connect_discovery
 from custom_components.texecom.const import DOMAIN
 from custom_components.texecom.factory import layout_to_data
@@ -45,7 +46,7 @@ async def setup_connect(
         domain=DOMAIN,
         title="Texecom Premier Elite 24",
         unique_id=f"127.0.0.1:{fake.port}",
-        minor_version=2,  # as made today: no upgrade (see test_upgrade.py)
+        minor_version=TexecomConfigFlow.MINOR_VERSION,  # as made today: no upgrade (see test_upgrade.py)
         data={
             "protocol": "connect",
             "host": "127.0.0.1",

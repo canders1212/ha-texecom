@@ -90,3 +90,34 @@ async def test_deleting_a_panel_deletes_its_dashboard(hass, fake):
         assert [url for url in hass.data["lovelace"].dashboards if url] == []
     finally:
         await second.close()
+
+
+async def test_upgrading_lets_an_older_dashboards_buttons_follow_arm_buttons(hass, fake):
+    """Dashboards made before 0.2.12 listed only the modes the alarm had then.
+    Upgrading lists every mode on the alarm's card, and keeps the user's edits."""
+    from homeassistant.setup import async_setup_component
+
+    from custom_components.texecom.config_flow import TexecomConfigFlow
+    from custom_components.texecom.dashboard import MODES
+
+    assert await async_setup_component(hass, "lovelace", {})
+    entry = await setup_connect(hass, fake)
+    url = await async_create_dashboard(hass, entry)
+    dashboard = hass.data["lovelace"].dashboards[url]
+    config = await dashboard.async_load(False)
+    left, right = config["views"][0]["sections"]
+    alarm = next(c for c in left["cards"] if c.get("entity") == "alarm_control_panel.texecom_house")
+    alarm["features"][0]["modes"] = ["armed_away", "armed_night", "disarmed"]  # as 0.2.9 made it
+    right["cards"].append({"type": "markdown", "content": "Mine"})  # an edit of the user's
+    await dashboard.async_save(config)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    hass.config_entries.async_update_entry(entry, minor_version=2)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)  # upgrades first
+    await hass.async_block_till_done()
+    assert entry.minor_version == TexecomConfigFlow.MINOR_VERSION
+    left, right = (await dashboard.async_load(False))["views"][0]["sections"]
+    alarm = next(c for c in left["cards"] if c.get("entity") == "alarm_control_panel.texecom_house")
+    assert alarm["features"][0]["modes"] == MODES
+    assert {"type": "markdown", "content": "Mine"} in right["cards"]
+    assert await hass.config_entries.async_unload(entry.entry_id)
