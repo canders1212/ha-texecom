@@ -31,7 +31,8 @@ async def test_connect_happy_path(hass, fake, no_setup):
     assert result["title"] == "Texecom Premier Elite 24"
     assert result["data"]["protocol"] == "connect" and result["data"]["create_dashboard"] is True
     assert [z["name"] for z in result["data"]["zones"]][:2] == ["Front Door", "Hallway"]
-    assert result["options"] == {"night_part_arm": 1, "home_part_arm": 0}
+    # Keep the panel clock right is on from the start (Texecom Connect only).
+    assert result["options"] == {"night_part_arm": 1, "home_part_arm": 0, "time_sync": True}
     assert result["result"].unique_id == f"127.0.0.1:{fake.port}"
 
 
