@@ -136,6 +136,20 @@ async def test_alarm_memory_doesnt_blame_a_zone_for_a_later_alarm(hass, fake):
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
+async def test_unavailable_until_the_panel_says_its_state(hass, fake):
+    """Connected, but the area's state not read yet (a moment after each
+    start): unavailable, so the activity list never shows "Unknown"."""
+    entry = await setup_connect(hass, fake)
+    panel = entry.runtime_data
+    panel.areas[1].known = False
+    panel.notify()
+    assert state(hass) == "unavailable"
+    panel.areas[1].known = True
+    panel.notify()
+    assert state(hass) == "disarmed"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_arming_while_not_connected_says_so(hass, fake):
     entry = await setup_connect(hass, fake)
     entry.runtime_data.set_connected(False)  # e.g. while the SmartCom reports an alarm
