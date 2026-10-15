@@ -42,9 +42,11 @@ async def test_entities_devices_and_states(hass, fake):
 
     devices = {d.name for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)}
     assert {"Premier Elite 24 panel", "House Alarm", "Front Door", "Smoke Detector"} <= devices
-    # Zone tamper sensors exist but are off by default.
-    tamper = er.async_get(hass).async_get("binary_sensor.texecom_front_door_tamper")
-    assert tamper is not None and tamper.disabled_by is not None
+    # Everything is on to start with: zone tamper sensors and current readings too.
+    entities = er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
+    assert [e.entity_id for e in entities if e.disabled_by] == []
+    assert hass.states.get("binary_sensor.texecom_front_door_tamper").state == "off"
+    assert hass.states.get("sensor.texecom_battery_current") is not None
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
