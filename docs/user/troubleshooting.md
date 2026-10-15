@@ -19,7 +19,7 @@
 |---|---|
 | **Everything shows as unavailable** | The panel has been unreachable for over 3 minutes. Look at **Panel connection** on the panel's device page and at **Settings → Repairs**, then see [The panel is unreachable](#the-panel-is-unreachable) |
 | **Panel connection goes off for about 2 minutes after an alarm** | Normal: the SmartCom sends its own report of the alarm, then lets Home Assistant back in. The alarm and the zones keep their last state meanwhile, and Home Assistant reconnects by itself |
-| **The SmartCom's address changed** | **Settings → Devices & services → Texecom → ⋮ → Reconfigure**, and enter the new one. Reserve the address in your router so it doesn't happen again |
+| **The SmartCom's address changed** | **Settings → Devices & services → Texecom → ⋮ → Reconfigure**, and enter the new one (leave the UDL code empty to keep it). Reserve the address in your router so it doesn't happen again |
 | **"Alarm not set" notification** | A zone was still active when the exit time ended (a door open, or someone in view of a sensor), so the panel didn't arm. The notification names the zone. Close it or keep out of view, and arm again |
 | **Home, Night or another button is missing from the alarm** | It's set to *'Not used'*: change it in **Configure → Arm buttons** |
 | **Home or Night is missing in the Home app** | The Home app remembers an alarm's buttons: see [Apple Home](apple-home.md#changed-night-or-home) |
