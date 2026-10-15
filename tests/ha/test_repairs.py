@@ -25,6 +25,8 @@ async def test_clock_repair_and_fix(hass, fake):
     flow.hass = hass
     result = await flow.async_step_init()
     assert result["step_id"] == "confirm"
+    # The screen says how far out the clock is (without it, it shows no text at all).
+    assert result["description_placeholders"] == {"drift": "about 2 years behind"}
     await flow.async_step_confirm({})
     assert entry.options["time_sync"] is True
     await hass.async_block_till_done()
