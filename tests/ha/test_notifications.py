@@ -63,6 +63,18 @@ async def test_tamper_notice_says_what_to_check(hass, fake):
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
+async def test_tamper_notice_names_a_tampered_zone(hass, fake):
+    """A zone with its own tamper (a wireless detector, or one wired with its
+    tamper in the zone) is named, not left to its hidden-away Tamper sensor."""
+    entry = await setup_connect(hass, fake)
+    fake.set_zone(5, 0x02)
+    await wait_for(lambda: _notice(hass, "tamper", entry) is not None)
+    assert "**Patio Door**: its detector's cover is open" in _notice(hass, "tamper", entry)["message"]
+    fake.set_zone(5, 0x00)
+    await wait_for(lambda: _notice(hass, "tamper", entry) is None)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_a_tamper_the_panel_doesnt_log_is_explained(hass, fake):
     """Seen on a real panel: a detector's cover opened, the internal sounder
     went off, but no tamper was logged. The notice says to look at the keypad."""
