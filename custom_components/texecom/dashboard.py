@@ -27,8 +27,9 @@ GROUPS = (
     ("Fire and safety", "mdi:fire", {"smoke", "gas", "carbon_monoxide", "safety", "heat"}),
     ("Other zones", "mdi:shield-outline", None),
 )
-# Feature bit -> mode, in the order the buttons show.
-MODES = {2: "armed_away", 4: "armed_night", 1: "armed_home", 32: "armed_vacation", 16: "armed_custom_bypass"}
+# The alarm's buttons, in order. Home Assistant shows only the modes the alarm
+# offers, so the dashboard follows Configure → Arm buttons without a rebuild.
+MODES = ["armed_away", "armed_night", "armed_home", "armed_vacation", "armed_custom_bypass", "disarmed"]
 URL_PATH = "texecom-alarm"
 
 
@@ -46,13 +47,11 @@ def build_config(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
         if e.domain != "alarm_control_panel":
             continue
         alarms.append(e.entity_id)
-        features = (e.supported_features or 0) if e.supported_features is not None else 7
-        modes = [mode for bit, mode in MODES.items() if features & bit] + ["disarmed"]
         alarm_cards.append(
             _tile(
                 e.entity_id,
                 vertical=False,
-                features=[{"type": "alarm-modes", "modes": modes}],
+                features=[{"type": "alarm-modes", "modes": MODES}],
                 features_position="bottom",
                 grid_options={"columns": "full"},
             )

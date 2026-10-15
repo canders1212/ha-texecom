@@ -53,14 +53,16 @@ async def test_reconfigure_to_a_new_address(hass, fake):
     try:
         result = await entry.start_reconfigure_flow(hass)
         assert result["step_id"] == "reconfigure_connect"
+        # Only the address changed: the UDL code is left empty, which keeps it.
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"host": "127.0.0.1", "port": moved.port, "udl": UDL}
+            result["flow_id"], {"host": "127.0.0.1", "port": moved.port}
         )
         assert result["type"] is FlowResultType.SHOW_PROGRESS
         assert entry.state is config_entries.ConfigEntryState.NOT_LOADED  # paused while it checks
         result = await after_progress(hass, result)
         assert result["type"] is FlowResultType.ABORT and result["reason"] == "reconfigure_successful"
         assert entry.data["port"] == moved.port and entry.unique_id == f"127.0.0.1:{moved.port}"
+        assert entry.data["udl"] == UDL
         await hass.async_block_till_done()
         await wait_for(lambda: entry.runtime_data.connected)
         assert moved.writers  # connected to the new one

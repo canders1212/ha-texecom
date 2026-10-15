@@ -14,7 +14,16 @@ async def test_dashboard_layout(hass, fake):
     config = build_config(hass, entry)
     left, right = config["views"][0]["sections"]
     alarm = next(c for c in left["cards"] if c.get("entity") == "alarm_control_panel.texecom_house")
-    assert alarm["features"][0]["modes"] == ["armed_away", "armed_night", "disarmed"]
+    # Every mode, in button order: Home Assistant shows only the ones the alarm
+    # offers, so the buttons follow Configure → Arm buttons without a rebuild.
+    assert alarm["features"][0]["modes"] == [
+        "armed_away",
+        "armed_night",
+        "armed_home",
+        "armed_vacation",
+        "armed_custom_bypass",
+        "disarmed",
+    ]
     headings = [c["heading"] for c in right["cards"] if c["type"] == "heading"]
     assert headings == ["Doors and windows", "Motion", "Fire and safety"]
     tiles = [c["entity"] for c in right["cards"] if c["type"] == "tile"]
