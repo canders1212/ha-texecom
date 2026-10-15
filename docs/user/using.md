@@ -47,7 +47,7 @@ It's the panel's own answer, checked a moment after doors and sensors change whi
 
 If you left the box ticked during setup, **Alarm** is in the sidebar: the arm buttons, **Ready to arm**, the last day's activity, panel health and every zone grouped by type. It's built from Home Assistant's own cards, so you can edit it like any dashboard.
 
-Its arm buttons follow **Configure → Arm buttons** by themselves. To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it. (A dashboard made before version 0.2.10 keeps the buttons it was made with until you refresh it once.)
+Its arm buttons follow **Configure → Arm buttons** by themselves. To build it again (for example after adding zones), use **Configure → Create or refresh the Alarm dashboard**. That replaces any changes you made to it.
 
 ## Options
 
@@ -61,7 +61,7 @@ Open **Settings → Devices & services → Texecom**, then the **⚙️ cog** on
 | **Home Assistant alarm code** | Optional. Home Assistant asks for it before disarming (and, if you tick the box, before arming). It's checked by Home Assistant, not the panel, and has nothing to do with your keypad codes. **It stops Apple Home and some automations working**: see [what a code affects](#what-a-home-assistant-alarm-code-affects) first |
 | **Names for keypad users** | One per line, like `3 = Sam`: the alarm then says *changed by Sam* instead of *User 3*, here and in the activity list. With a SmartCom or ComIP, they start as the names your installer stored in the panel: Home Assistant fills them in the first time it connects (the engineer code, user 0, as *Engineer*), unless you've already given names. After your installer changes them, tick *Fill in the names stored in the panel* to read them again. The panel sends each user's code with the name; Home Assistant drops the codes at once, without keeping or logging them |
 | **Notifications** | Whether Home Assistant shows a notification while the panel has no mains power, or while a tamper is open (both on to start with) |
-| **Panel clock** | **Keep the panel clock right** (on to start with; updating to version 0.2.11 turns it on too, unless you'd turned it off): once a day (and on connecting), sets the panel's clock if it's more than a minute out, in Home Assistant's time zone (so British Summer Time is handled). A clock that's already right (the Texecom Cloud can keep it right too) is left alone. *Reconnects to the panel* |
+| **Panel clock** | **Keep the panel clock right** (on to start with): once a day (and on connecting), sets the panel's clock if it's more than a minute out, in Home Assistant's time zone (so British Summer Time is handled). A clock that's already right (the Texecom Cloud can keep it right too) is left alone. *Reconnects to the panel* |
 | **Read zones and areas from the panel again** | After your installer adds, renames or moves zones. Over Texecom Connect it happens by itself when engineer programming at a keypad ends, or a few seconds after Wintex saves a page; after a full send from Wintex, use this option (once Wintex has disconnected) |
 | **Create or refresh the Alarm dashboard** | Builds the dashboard again from the current zones (it asks first, because any changes you made to it are replaced) |
 
