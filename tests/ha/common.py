@@ -45,6 +45,7 @@ async def setup_connect(
         domain=DOMAIN,
         title="Texecom Premier Elite 24",
         unique_id=f"127.0.0.1:{fake.port}",
+        minor_version=2,  # as made today: no upgrade (see test_upgrade.py)
         data={
             "protocol": "connect",
             "host": "127.0.0.1",
