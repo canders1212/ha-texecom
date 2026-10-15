@@ -13,7 +13,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 
-from .const import CONF_CREATE_DASHBOARD, CONF_PROTOCOL, DOMAIN, HELP_PART_ARMS, PROTOCOL_CRESTRON
+from .const import CONF_CREATE_DASHBOARD, CONF_PROTOCOL, CONF_TIME_SYNC, DOMAIN, HELP_PART_ARMS, PROTOCOL_CRESTRON
 from .entity import nice_name
 from .flows.connect import ConnectSteps
 from .flows.crestron import CrestronSteps
@@ -47,7 +47,13 @@ class TexecomConfigFlow(ConnectSteps, CrestronSteps, ReauthReconfigureSteps, Con
             else:
                 # The dashboard is built once the entities exist (in setup).
                 data = {**self._data, CONF_CREATE_DASHBOARD: bool(user_input.get(CONF_CREATE_DASHBOARD))}
-                return self.async_create_entry(title=self._title(), data=data, options=arm_mode_options(user_input))
+                options = arm_mode_options(user_input)
+                if not crestron:
+                    # Keeps the panel clock right from the start: it only sets
+                    # the clock when it's more than a minute out (Options → Panel
+                    # clock turns it off). Entries made before 0.2.11 keep theirs.
+                    options[CONF_TIME_SYNC] = True
+                return self.async_create_entry(title=self._title(), data=data, options=options)
         placeholders = {"zones": "", "areas": "", "help": HELP_PART_ARMS}
         if not crestron:
             placeholders["zones"] = ", ".join(nice_name(z["name"]) for z in self._data["zones"])
