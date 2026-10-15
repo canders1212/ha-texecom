@@ -12,12 +12,12 @@ from .const import CONF_PROTOCOL, PROTOCOL_CONNECT
 from .entity import TexecomEntity
 from .panel import TexecomPanel
 
-# (key, attribute of SystemPower, device class, unit, enabled by default)
+# (key, attribute of SystemPower, device class, unit)
 POWER_SENSORS = (
-    ("panel_voltage", "panel_voltage", SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, True),
-    ("battery_voltage", "battery_voltage", SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT, True),
-    ("panel_current", "panel_current", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.MILLIAMPERE, False),
-    ("battery_current", "battery_current", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.MILLIAMPERE, False),
+    ("panel_voltage", "panel_voltage", SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT),
+    ("battery_voltage", "battery_voltage", SensorDeviceClass.VOLTAGE, UnitOfElectricPotential.VOLT),
+    ("panel_current", "panel_current", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.MILLIAMPERE),
+    ("battery_current", "battery_current", SensorDeviceClass.CURRENT, UnitOfElectricCurrent.MILLIAMPERE),
 )
 
 
@@ -45,14 +45,12 @@ class TexecomPowerSensor(TexecomEntity, SensorEntity):
         attribute: str,
         device_class: SensorDeviceClass,
         unit: str,
-        enabled: bool,
     ) -> None:
         super().__init__(entry, panel, key, object_id=key)
         self._attribute = attribute
         self._attr_translation_key = key
         self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = unit
-        self._attr_entity_registry_enabled_default = enabled
         if device_class == SensorDeviceClass.VOLTAGE:
             self._attr_suggested_display_precision = 2
 

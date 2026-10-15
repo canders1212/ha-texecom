@@ -7,8 +7,8 @@
 | Device | What it has |
 |---|---|
 | **House Alarm** (one per area, named after it) | The alarm: arm and disarm, and its state. **Ready to arm** says whether it would set now |
-| **Premier Elite 24 panel** (your panel's size) | **Panel connection**, **Mains power**, **Problem**, **Tamper**, **Keypad display**, battery and panel voltages (current readings are there too, switched off until you want them) |
-| One device per zone, e.g. **Front Door** | Whether the zone is open or sees movement. Each also has a **Tamper** sensor, switched off until you want it |
+| **Premier Elite 24 panel** (your panel's size) | **Panel connection**, **Mains power**, **Problem**, **Tamper**, **Keypad display**, battery and panel voltages and currents |
+| One device per zone, e.g. **Front Door** | Whether the zone is open or sees movement, and its **Tamper** (for detectors that report their own tamper, such as wireless ones; most wired detectors share one tamper circuit, shown on the panel's **Tamper**) |
 
 Entity IDs start with `texecom_`, e.g. `alarm_control_panel.texecom_house` and `binary_sensor.texecom_front_door`, so they're easy to find. They don't change if you rename things in Home Assistant.
 
