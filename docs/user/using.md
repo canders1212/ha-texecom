@@ -53,7 +53,7 @@ Its arm buttons follow **Configure → Arm buttons** by themselves. To build it 
 
 Open **Settings → Devices & services → Texecom**, then the **⚙️ cog** on your panel's row (Home Assistant calls it *Configure*; *Reconfigure*, in the ⋮ menu, only changes the connection), and pick what to change:
 
-<img src="../images/options.png" width="420" alt="The Texecom options menu: Night and Home buttons, Home Assistant alarm code, Names for keypad users, Notifications, Panel clock, Read zones and areas from the panel again, Create or refresh the Alarm dashboard">
+<img src="../images/options.png" width="420" alt="The Texecom options menu: Arm buttons, Home Assistant alarm code, Names for keypad users, Notifications, Panel clock, Read zones and areas from the panel again, Create or refresh the Alarm dashboard">
 
 | In the menu | What it does |
 |---|---|
