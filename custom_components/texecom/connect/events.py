@@ -1,20 +1,22 @@
 """What the panel's messages mean: zone, area and user events and the event
 log. Alarms (and the zone that set one off), who armed or disarmed, failed
 arms, part arms from the log, and engineer programming ending. Tamper and
-fault log entries are passed on to conditions.py."""
+fault log entries are passed on to conditions.py. After a reconnect, what
+the stored event log holds from while the session was down."""
 
 from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..panel import DISARMED, TRIGGERED, PanelArea, PanelZone, nice_name
+from ..panel import DISARMED, TRIGGERED, PanelArea, PanelInfo, PanelZone, nice_name
 from . import protocol as P
 from .capture import Capture
-from .client import HostLog
+from .client import ConnectClient, ConnectError, HostLog
 
 # Log event types the driver reacts to (numbering as in texecom2mqtt).
 LOG_AUTO_OPEN_CLOSE = 39
@@ -37,6 +39,18 @@ ZONE_ALARM_REPEAT = 30.0
 # Flag re-reads (about 0.5 s apart) in an exit delay until they say what it's
 # arming to: a full arm's flag came about 1.5 s after the exit delay started.
 EXIT_READS = 4
+# After a reconnect, the stored log entries written since the last login are
+# read (at most this many, 5 per read), and those that didn't come live are
+# applied: a tamper closed or a fault ended while the session was down (e.g.
+# the ~2 minutes a SmartCom takes to report an alarm) doesn't stay on.
+MAX_LOG_CATCH_UP = 30
+LIVE_LOG_KEPT = 128  # live log messages remembered, so the catch-up can skip them
+
+
+def log_key(m: dict[str, Any]) -> tuple:
+    """What identifies a log entry, live or stored: they match to the second
+    (the communicated bits can differ)."""
+    return m["type"], m["group"], m["parameter"], m["areas"], tuple(sorted(m["time"].items()))
 
 
 @dataclass
@@ -66,7 +80,13 @@ class EventsMixin:
     _internal_alarms: dict[int, Any]
     _last_cause_at: float
     _rediscover_handle: asyncio.TimerHandle | None
+    _rediscover_pending: bool
     _exit_reads: dict[int, int]
+    client: ConnectClient | None
+    info: PanelInfo
+    _log_pointer: int | None  # where the stored log ended at the last login
+    _live_log: deque[tuple]  # log_key of the latest live log messages
+    _log_unanswered: bool  # the panel didn't answer for its log: don't ask again (each try costs ~7 s)
 
     def _recent_user(self, area: int) -> str | None:
         credit = self._last_user
@@ -118,6 +138,7 @@ class EventsMixin:
             if any(a.since is not None for a in self._internal_alarms.values()):
                 self._refresh_areas_soon()  # a code silences the internal alarm (conditions.py)
         elif kind == "log":
+            self._live_log.append(log_key(m))
             self._on_log(m)
         self.capture.add(m)  # afterwards: recording it can never stop it being handled
 
@@ -182,6 +203,63 @@ class EventsMixin:
             self._spawn(self._rediscover())
         elif m["type"] == LOG_SITE_DATA_CHANGED:
             self._rediscover_soon()
+
+    async def _catch_up_log(self) -> None:
+        """After the login: the stored log entries written since the last
+        login that didn't come live. The first login only notes where the
+        log ends (its history isn't news)."""
+        size, capacity = P.log_entry_size(self.info.zones), P.LOG_CAPACITY.get(self.info.zones)
+        client = self.client
+        if not client or not size or not capacity or self._log_unanswered:
+            return
+        try:
+            pointer = await client.log_pointer()
+        except ConnectError:
+            if not client.connected:
+                raise
+            self._log.debug("Connect: no answer for the event log's position; not asking again")
+            self._log_unanswered = True
+            return
+        if pointer is None or not 0 <= pointer < capacity:
+            self._log.debug("Connect: the event log's position was refused; no catching up this time")
+            return
+        start, self._log_pointer = self._log_pointer, pointer
+        if start is None:
+            return
+        count = (pointer - start) % capacity
+        if count > MAX_LOG_CATCH_UP:
+            start, count = (pointer - MAX_LOG_CATCH_UP) % capacity, MAX_LOG_CATCH_UP
+        missed: list[dict[str, Any]] = []
+        while count:
+            chunk = min(count, P.MAX_LOG_EVENTS_PER_READ, capacity - start)  # a read never runs past the ring's end
+            try:
+                entries = await client.log_entries(start, chunk, size)
+            except ConnectError:
+                if not client.connected:
+                    raise
+                self._log_unanswered, entries = True, None
+            if entries is None:
+                self._log.debug("Connect: event log read at %d failed; catching up stops there", start)
+                break
+            missed += [m for m in entries if log_key(m) not in self._live_log]
+            start, count = (start + chunk) % capacity, count - chunk
+        for m in missed:
+            self._log.debug("Connect: logged while disconnected: %s", P.describe_log(m))
+            self._on_missed_log(m)
+
+    def _on_missed_log(self, m: dict[str, Any]) -> None:
+        """A log entry written while disconnected. Only what's still true now
+        is applied: a tamper or fault starting or ending, settings changed.
+        Not momentary events: a zone alarm or a failed arm reported late
+        would look like a new one (and a zone alarm is logged again once it
+        has been reported), and the area states read at the login already
+        show where things are."""
+        if m["type"] > 21 and m["group"] in (GROUP_TAMPER_ALARM, GROUP_TAMPER_RESTORE):
+            self._on_system_tamper(m)
+        if m["type"] in P.FAULT_LOG_NAMES:
+            self._on_fault(m)
+        if m["type"] in (LOG_INSTALLER_PROGRAMMING_END, LOG_DOWNLOAD_END, LOG_SITE_DATA_CHANGED):
+            self._rediscover_pending = True  # read once, after the login (panel.py)
 
     def _rediscover_soon(self) -> None:
         """Reads the zones and areas again once the writes have stopped."""

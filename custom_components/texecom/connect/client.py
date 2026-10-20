@@ -308,6 +308,19 @@ class ConnectClient:
         reply = await self.command(P.CMD_GET_SYSTEM_FLAGS, optional=True)
         return None if P.is_nak(reply) else reply
 
+    async def log_pointer(self) -> int | None:
+        """Where the panel writes its next event-log entry; None if it
+        refuses. Optional: not every panel may have it."""
+        reply = await self.command(P.CMD_GET_LOG_POINTER, optional=True)
+        return int.from_bytes(reply, "little") if len(reply) == 2 else None
+
+    async def log_entries(self, index: int, count: int, size: int) -> list[dict[str, Any]] | None:
+        """count stored event-log entries from index, oldest first, decoded
+        like live log messages; None if the panel refuses."""
+        reply = await self.command(P.CMD_GET_LOG_EVENTS, P.encode_get_log_events(index, count), optional=True)
+        entries = P.decode_log_entries(reply, size)
+        return entries if entries is not None and len(entries) == count else None
+
     async def date_time(self) -> tuple[int, int, int, int, int, int] | None:
         return P.decode_date_time(await self.command(P.CMD_GET_DATE_TIME))
 

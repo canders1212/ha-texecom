@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import logging
 import time
+from collections import deque
 from collections.abc import Callable
 from datetime import tzinfo
 from typing import Any
@@ -36,7 +37,7 @@ from .client import ConnectClient, ConnectError, HostLog, LoginRejected, PanelBu
 from .clock import ClockMixin
 from .conditions import ConditionsMixin, InternalAlarm
 from .discovery import RediscoveryMixin
-from .events import USER_CHANGE_WINDOW, Credit, EventsMixin
+from .events import LIVE_LOG_KEPT, USER_CHANGE_WINDOW, Credit, EventsMixin
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -124,6 +125,9 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
         self._disarmed_at: dict[int, float] = {}  # area -> when the panel last announced its disarm
         self._exit_reads: dict[int, int] = {}  # area -> re-reads left to learn what it's arming to
         self._last_cause_at = float("-inf")  # when a tamper, zone alarm or failed arm was last reported
+        self._log_pointer: int | None = None  # the event log catch-up (events.py)
+        self._live_log: deque[tuple] = deque(maxlen=LIVE_LOG_KEPT)
+        self._log_unanswered = False
         self.last_error: str | None = None
         self.capture = Capture()  # the panel's recent messages, for diagnostics (capture.py)
 
@@ -247,6 +251,9 @@ class ConnectPanel(RediscoveryMixin, EventsMixin, ConditionsMixin, ClockMixin, T
     async def _start_up(self) -> None:
         for attempt in range(3):
             try:
+                # First, so a fault the log says ended meanwhile can't
+                # outlast the power reading that follows.
+                await self._catch_up_log()
                 await self.refresh()
                 await self.read_power()
                 await self.read_display()

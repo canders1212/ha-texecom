@@ -1547,3 +1547,120 @@ async def test_a_timer_from_the_last_session_waits_for_the_next_login(fake, monk
         await wait_for(lambda: any(cmd == P.CMD_GET_ZONE_DETAILS for cmd, _args in fake.commands[start:]))
     finally:
         await panel.stop()
+
+
+# ─── Catching up from the event log after a drop ────────────────────────────
+
+
+async def drop_for(fake: FakeConnectPanel, panel: ConnectPanel, seconds: float) -> None:
+    """The panel hangs up and turns logins away for a while (as a SmartCom
+    reporting an alarm does, for about 2 minutes)."""
+    fake.busy_until = asyncio.get_running_loop().time() + seconds
+    fake.drop_all()
+    await wait_for(lambda: not panel.connected and not fake.writers)
+
+
+async def test_tampers_and_faults_ending_while_disconnected_are_caught_up(fake):
+    """What the panel logged while the session was down (e.g. the ~2 minutes
+    a SmartCom takes to report an alarm) is read from its event log after the
+    login: a tamper closed or a fault ended meanwhile no longer stays on."""
+    events: list[tuple[str, dict]] = []
+    panel = await make_panel(fake, on_event=lambda t, d: events.append((t, d)))
+    try:
+        fake.open_tamper(62)  # Auxiliary Tamper
+        fake.send_log(48, 9, 0, areas=0)  # Low Battery
+        await wait_for(lambda: "Auxiliary Tamper" in panel.extra.get("tampers", ()))
+        await wait_for(lambda: "Low Battery" in panel.extra.get("faults", ()))
+        await drop_for(fake, panel, 0.3)
+        fake.send_log(62, 12, 0, areas=0)  # the cover closed again...
+        fake.send_log(48, 10, 0, areas=0)  # ...and the battery recovered, while no one was connected
+        await wait_for(lambda: panel.connected)
+        await wait_for(lambda: "Auxiliary Tamper" not in panel.extra.get("tampers", ()))
+        assert "Low Battery" not in panel.extra.get("faults", ())
+        cleared = [d["source"] for t, d in events if t in ("tamper_cleared", "fault_cleared")]
+        assert cleared == ["Auxiliary Tamper", "Low Battery"]
+    finally:
+        await panel.stop()
+
+
+async def test_the_catch_up_repeats_nothing_seen_live_or_from_before_home_assistant_started(fake):
+    """Only what was missed: not the log's history at the first login, not
+    what came live, and not momentary events (a zone alarm or a failed arm
+    reported late would look like a new one; the area states read at the
+    login already show where things are)."""
+    fake.send_log(47, 9, 0, areas=0)  # an AC Fail from long ago, before Home Assistant started
+    events: list[tuple[str, dict]] = []
+    panel = await make_panel(fake, on_event=lambda t, d: events.append((t, d)))
+    try:
+        assert "AC Fail" not in panel.extra.get("faults", ())
+        fake.open_tamper(60)  # the lid, opened and closed while connected
+        fake.send_log(60, 12, 0, areas=0)
+        await wait_for(lambda: len(events) == 2)
+        await drop_for(fake, panel, 0.3)
+        fake.send_log(3, 3, 2)  # a zone alarm logged again once reported, during the drop
+        fake.send_log(85, 0, 5)  # a failed arm at the keypad
+        await wait_for(lambda: panel.connected)
+        await asyncio.sleep(0.3)
+        assert [t for t, _d in events] == ["tamper", "tamper_cleared"]
+        assert "AC Fail" not in panel.extra.get("faults", ())
+    finally:
+        await panel.stop()
+
+
+async def test_settings_changed_while_disconnected_are_read_after_the_login(fake):
+    panel = await make_panel(fake)
+    changed = []
+    panel.on_layout_changed = lambda info, zones, areas: changed.append(zones)
+    try:
+        await drop_for(fake, panel, 0.3)
+        fake.zone_list = [(4, "Garage", 3, 2) if z[0] == 4 else z for z in fake.zone_list]
+        fake.area_names[2] = "GARAGE"
+        fake.area_states[2], fake.part_arms[2] = 0, None
+        fake.send_log(100, 9, 1)  # Site Data Changed, by Wintex
+        fake.send_log(100, 9, 1)
+        await wait_for(lambda: changed, timeout=5)
+        assert next(z for z in changed[0] if z.number == 4).areas == [2]
+        await asyncio.sleep(0.3)
+        assert len(changed) == 1
+    finally:
+        await panel.stop()
+
+
+async def test_a_panel_that_doesnt_answer_for_its_log_isnt_asked_again(fake):
+    """One that refuses is asked again next time (it may have been busy for
+    a moment); one that doesn't answer at all holds up each login (~7 s)."""
+    fake.stored_log = False  # refuses
+    panel = await make_panel(fake)
+    try:
+        fake.ignore_next[P.CMD_GET_LOG_POINTER] = 99  # from now on, no answer
+        for _ in range(2):
+            await drop_for(fake, panel, 0.1)
+            await wait_for(lambda: panel.connected)
+        # 1 refused, then 2 tries unanswered, then not asked
+        assert sum(cmd == P.CMD_GET_LOG_POINTER for cmd, _args in fake.commands) == 3
+    finally:
+        await panel.stop()
+
+
+async def test_the_catch_up_reads_across_the_end_of_the_log_and_only_the_latest_entries(fake, monkeypatch):
+    from custom_components.texecom.connect import events as events_module
+
+    monkeypatch.setattr(events_module, "MAX_LOG_CATCH_UP", 6)
+    fake.log_pointer = 495  # near the end of an Elite 24's 500-entry ring
+    panel = await make_panel(fake)
+    try:
+        fake.open_tamper(62)  # entry 495
+        await wait_for(lambda: "Auxiliary Tamper" in panel.extra.get("tampers", ()))
+        await drop_for(fake, panel, 0.3)
+        fake.send_log(60, 11, 0, areas=0)  # 496, the lid opened: before the last 6, so not read
+        for _ in range(4):
+            fake.send_log(113, 9, 1)  # 497-499 and 0: Remote Command
+        fake.send_log(62, 12, 0, areas=0)  # 1
+        fake.send_log(113, 9, 1)  # 2
+        await wait_for(lambda: panel.connected)
+        await wait_for(lambda: "Auxiliary Tamper" not in panel.extra.get("tampers", ()))
+        assert "Panel Box Tamper" not in panel.extra.get("tampers", ())
+        reads = [args for cmd, args in fake.commands if cmd == P.CMD_GET_LOG_EVENTS]
+        assert reads == [P.encode_get_log_events(497, 3), P.encode_get_log_events(0, 3)]
+    finally:
+        await panel.stop()

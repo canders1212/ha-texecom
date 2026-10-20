@@ -150,6 +150,12 @@ class FakeConnectPanel:
         # The codes are fakes, used to check that Home Assistant never keeps or logs one.
         self.users: dict[int, tuple[str, str]] = dict(FAKE_USERS)
         self.recorded: list[dict] = []  # messages from a diagnostics file, for replay()
+        # The stored event log: a ring (500 entries on an Elite 24) that send_log writes to whether
+        # or not anyone is connected, read with GET_LOG_POINTER and GET_LOG_EVENTS. stored_log
+        # False: a panel that refuses both.
+        self.log: dict[int, bytes] = {}
+        self.log_pointer = 0
+        self.stored_log = True
         self.tasks: set[asyncio.Task] = set()  # replays running (asyncio holds tasks weakly)
 
     @classmethod
@@ -251,7 +257,15 @@ class FakeConnectPanel:
     def busy(self) -> bool:
         return asyncio.get_running_loop().time() < self.busy_until
 
-    def send_log(self, log_type: int, group: int, parameter: int, areas: int = 1) -> None:
+    @property
+    def log_layout(self) -> tuple[int, int]:
+        """The stored log's entry size and ring size for this panel's model."""
+        zones = P.decode_panel_identification(self.ident.ljust(32)).zones
+        return P.log_entry_size(zones) or 8, P.LOG_CAPACITY.get(zones, 500)
+
+    def send_log(self, log_type: int, group: int, parameter: int, areas: int = 1, live: bool = True) -> None:
+        """Logs an entry, and sends it to whoever is connected (live False:
+        stored only, as the panel's log can hold what was never sent)."""
         now = datetime.now()
         ts = (
             now.second
@@ -261,7 +275,12 @@ class FakeConnectPanel:
             | (now.day << 21)
             | ((now.year - 2000) << 26)
         )
-        self.send(bytes([P.MSG_LOG, log_type, group, parameter, areas]) + struct.pack("<I", ts))
+        entry = bytes([log_type, group, parameter, areas & 0xFF]) + struct.pack("<I", ts)
+        size, capacity = self.log_layout
+        self.log[self.log_pointer] = entry + bytes([areas >> 8])[: size - 8]
+        self.log_pointer = (self.log_pointer + 1) % capacity
+        if live:
+            self.send(bytes([P.MSG_LOG]) + entry)
 
     def send_zone_alarm(self, number: int) -> None:
         """The zone-alarm log entry. Its type is the zone's type, as on a real
@@ -403,6 +422,14 @@ class FakeConnectPanel:
             reply(ack)
         elif cmd == P.CMD_GET_SYSTEM_FLAGS:
             reply(self.system_flags)
+        elif cmd == P.CMD_GET_LOG_POINTER and self.stored_log:
+            reply(self.log_pointer.to_bytes(2, "little"))
+        elif cmd == P.CMD_GET_LOG_EVENTS and self.stored_log:
+            index, count = int.from_bytes(args[:2], "little"), args[2]
+            if index + count > self.log_layout[1] or any(index + n not in self.log for n in range(count)):
+                reply(bytes([P.NAK]))
+            else:
+                reply(b"".join(self.log[index + n] for n in range(count)))
         elif cmd == P.CMD_GET_USER:
             number = args[0] if args else 0
             # A Premier Elite 24 refuses user 0 (the engineer code has no user record).
@@ -462,7 +489,8 @@ COMMANDS = """Commands, one per line:
   aux open|closed                    a detector's cover (Auxiliary Tamper, the shared circuit), the same
   lid|aux open unlogged              the same, but the panel doesn't log it (seen once on a real panel)
   armfail N                          arming failed: zone N was active when the exit time ended
-  drop                               hang up, as when the panel reports an alarm
+  drop [N]                           hang up, as when the panel reports an alarm (and turn logins away
+                                     for N seconds: what's logged meanwhile is caught up after the login)
   busy N                             from now on, after an alarm is disarmed: hang up and turn logins
                                      away for N seconds, as a SmartCom reporting the alarm (about 120)
   refuse arm|disarm                  say no to the next arm or disarm from Home Assistant
@@ -514,7 +542,8 @@ def run_command(panel: FakeConnectPanel, line: str) -> str:
                 panel.send_log(TAMPER_LOGS[place], 12, 0, areas=0)
             case ["armfail", n]:
                 panel.send_log(85, 0, int(n))
-            case ["drop"]:
+            case ["drop", *seconds] if len(seconds) <= 1:
+                panel.busy_until = asyncio.get_running_loop().time() + float(seconds[0] if seconds else 0)
                 panel.drop_all()
             case ["busy", seconds]:
                 panel.busy_after_alarm = float(seconds)
