@@ -14,8 +14,8 @@ from __future__ import annotations
 import contextlib
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -87,6 +87,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: TexecomConfigEntry) -> b
             panel.notify()
 
     entry.async_on_unload(entry.add_update_listener(options_updated))
+
+    async def home_assistant_stopping(_event: Event) -> None:
+        # Home Assistant doesn't unload integrations when it stops: close the
+        # session and stop reconnecting, rather than be cut off at the end.
+        await panel.stop()
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, home_assistant_stopping))
     # Connects in the background (entities show as unavailable until then),
     # last: if anything above fails, no connection is left holding the
     # SmartCom's only session.

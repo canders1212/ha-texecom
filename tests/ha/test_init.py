@@ -190,6 +190,23 @@ async def test_the_panel_clock_uses_home_assistants_time_zone(hass, fake):
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
+async def test_stopping_home_assistant_closes_the_session(hass, fake):
+    """Home Assistant doesn't unload integrations when it stops, so the
+    integration closes its session and stops reconnecting itself, rather than
+    being cut off at the very end."""
+    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+
+    entry = await setup_connect(hass, fake)
+    connections = fake.connections
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
+    await wait_for(lambda: not fake.writers)
+    await asyncio.sleep(0.3)
+    assert fake.connections == connections  # no reconnect either
+    assert not entry.runtime_data.connected
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_a_failed_setup_leaves_no_connection_open(hass, fake):
     """If setting up fails (here: building the dashboard, which uses Home
     Assistant's internals), no connection to the panel is left running: it
