@@ -220,6 +220,11 @@ class ConnectClient:
         async with self._lock:
             if not self._writer or self._closed:
                 raise ConnectError("not connected")
+            if not self._logged_in and cmd not in (P.CMD_LOGIN, P.CMD_SET_EVENT_MESSAGES):
+                # E.g. a timer from the last session coming due during this
+                # one's wait to log in. Sent first, it could go unanswered
+                # and hold up the login for ~17 s (5 tries of 3.5 s).
+                raise ConnectError("not logged in yet")
             sequence = self._sequence
             self._sequence = (self._sequence + 1) & 0xFF
             frame = P.encode_command(sequence, cmd, body)

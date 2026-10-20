@@ -1526,3 +1526,24 @@ async def test_a_refused_zone_read_never_drops_a_zone(fake, monkeypatch):
         assert not panel._rediscover_pending
     finally:
         await panel.stop()
+
+
+async def test_a_timer_from_the_last_session_waits_for_the_next_login(fake, monkeypatch):
+    """A re-read of the zones set for 5 s after Site Data Changed (or another
+    timer) can come due during the next session's wait before its login. It
+    mustn't be sent before the login: a panel that ignores it would hold the
+    session up for ~17 s. It's read once logged in instead."""
+    from custom_components.texecom.connect import events
+
+    monkeypatch.setattr(events, "REDISCOVER_DELAY", 0.2)
+    panel = await make_panel(fake, timing=Timing(command_timeout=0.3, command_attempts=2, login_delay=0.5))
+    try:
+        fake.send_log(100, 9, 1)  # Site Data Changed: the zones are read again in 0.2 s
+        await wait_for(lambda: panel._rediscover_handle is not None)
+        start = len(fake.commands)
+        fake.drop_all()  # the next session waits 0.5 s to log in: the timer comes due meanwhile
+        await wait_for(lambda: len(fake.commands) > start)
+        assert fake.commands[start][0] == P.CMD_LOGIN
+        await wait_for(lambda: any(cmd == P.CMD_GET_ZONE_DETAILS for cmd, _args in fake.commands[start:]))
+    finally:
+        await panel.stop()
