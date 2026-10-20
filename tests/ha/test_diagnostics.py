@@ -39,3 +39,15 @@ async def test_diagnostics_hide_keypad_user_names(hass, fake):
     assert "Sam" not in str(diag) and "Alex" not in str(diag)
     assert entry.options["user_names"] == {"3": "Sam", "4": "Alex"}  # the stored names are untouched
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_diagnostics_hide_the_address_everywhere(hass, fake):
+    # Not only in the settings: the last connection error names it too.
+    entry = await setup_connect(hass, fake)
+    entry.runtime_data.last_error = (
+        f"cannot reach 127.0.0.1:{fake.port} (Connect call failed ('127.0.0.1', {fake.port}))"
+    )
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert "127.0.0.1" not in str(diag)
+    assert diag["panel"]["last_error"].startswith("cannot reach **REDACTED**:")
+    assert await hass.config_entries.async_unload(entry.entry_id)

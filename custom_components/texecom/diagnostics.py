@@ -21,17 +21,31 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: Texecom
     options = async_redact_data(dict(entry.options), TO_REDACT)
     if CONF_USER_NAMES in options:  # people's names: keep which users are named, not the names
         options[CONF_USER_NAMES] = dict.fromkeys(options[CONF_USER_NAMES], REDACTED)
+    panel_data = {
+        "connected": panel.connected,
+        "info": asdict(panel.info),
+        "part_arms": panel.part_arms,
+        "areas": [asdict(a) for a in panel.areas.values()],
+        "zones": [asdict(z) for z in panel.zones.values()],
+        **extra,
+    }
+    if host := entry.data.get(CONF_HOST):  # e.g. in the last connection error
+        panel_data = _without(panel_data, host)
     return {
         "entry": {
             "data": async_redact_data(dict(entry.data), TO_REDACT),
             "options": options,
         },
-        "panel": {
-            "connected": panel.connected,
-            "info": asdict(panel.info),
-            "part_arms": panel.part_arms,
-            "areas": [asdict(a) for a in panel.areas.values()],
-            "zones": [asdict(z) for z in panel.zones.values()],
-            **extra,
-        },
+        "panel": panel_data,
     }
+
+
+def _without(value: Any, address: str) -> Any:
+    """`value` with `address` redacted from any text in it."""
+    if isinstance(value, str):
+        return value.replace(address, REDACTED)
+    if isinstance(value, dict):
+        return {key: _without(item, address) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_without(item, address) for item in value]
+    return value
