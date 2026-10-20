@@ -236,6 +236,7 @@ A COM port set to *Crestron System*: text lines, plus binary UDL (Wintex) frames
 - **Part arms** use the binary `S` frame (area index, part arm 1–3), confirmed for area 1 only.
 - **Keypad emulation (`KEY`)** is ignored on V6.05.03. **UDL memory addresses** differ between firmware versions, so the integration doesn't read memory.
 - **ASTATUS** doesn't report the exit delay or the end of an alarm.
+- **The adapter takes the connection itself** (the panel is behind its serial port), so a connection opening says nothing about the panel: the driver counts it as connected only once the panel sends something on that connection. `ASTATUS` is sent on connect (after a UDL session, once the feed is due back). Through the ESP Easy serial server, the connection opened in 10–23 ms and the Elite 24 answered `"NN` 0.70–0.88 s after `ASTATUS` (three tries, 20 Oct 2026). A connection the panel never answers is a failed attempt: the back-off grows, and an outage logs one warning.
 
 ### Premier Elite 168, V6.06.03 (a tester's panel, Oct 2026)
 
