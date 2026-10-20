@@ -12,6 +12,8 @@ import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
+from serial_asyncio_fast import open_serial_connection
+
 from ..panel import PanelError, PanelNotConnected
 from . import protocol as P
 
@@ -93,9 +95,6 @@ class ConnectionMixin:
 
     async def _open(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         if self.serial_device:
-            # Loaded lazily so network-only installs never need it.
-            from serial_asyncio_fast import open_serial_connection
-
             return await open_serial_connection(url=self.serial_device, baudrate=self.baud_rate)
         return await asyncio.wait_for(asyncio.open_connection(self.host, self.port), CONNECT_TIMEOUT)
 

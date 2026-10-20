@@ -45,12 +45,12 @@ The full map, the contracts and how things flow: [docs/development/architecture.
 
 ```bash
 # Python 3.13, no Home Assistant: lint and driver tests
-pip install pytest pytest-asyncio ruff
+pip install pytest pytest-asyncio ruff "pyserial-asyncio-fast>=0.11"
 ruff check . && ruff format --check .
 pytest tests --ignore=tests/ha
 
 # Python 3.14, separate environment: the Home Assistant tests
-pip install "pytest-homeassistant-custom-component==0.13.367"
+pip install "pytest-homeassistant-custom-component==0.13.367" "pyserial-asyncio-fast>=0.11"
 pytest tests/ha
 ```
 

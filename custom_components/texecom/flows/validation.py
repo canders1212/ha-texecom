@@ -23,6 +23,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
+from serial_asyncio_fast import open_serial_connection
 
 from ..connect.client import ConnectError, LoginRejected
 from ..connect.discovery import probe
@@ -115,8 +116,6 @@ async def validate_crestron_network(host: str, port: int) -> str | None:
 async def validate_serial(device: str, baud_rate: int) -> str | None:
     """Checks the serial device opens (its owner or path is the usual problem)."""
     try:
-        from serial_asyncio_fast import open_serial_connection
-
         _reader, writer = await asyncio.wait_for(open_serial_connection(url=device, baudrate=baud_rate), 10)
     except (OSError, TimeoutError, ImportError, ValueError) as err:
         _LOGGER.debug("Opening %s failed: %s", device, err)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -97,12 +96,10 @@ async def test_crestron_address_typo(hass, socket_enabled, no_setup):
 
 @pytest.fixture
 def fake_serial():
-    """serial_asyncio_fast stand-in: opens fine unless told otherwise."""
-    module = types.ModuleType("serial_asyncio_fast")
-    writer = MagicMock()
-    module.open_serial_connection = AsyncMock(return_value=(MagicMock(), writer))
-    with patch.dict(sys.modules, {"serial_asyncio_fast": module}):
-        yield module
+    """A stand-in for opening the serial port: opens fine unless told otherwise."""
+    serial = types.SimpleNamespace(open_serial_connection=AsyncMock(return_value=(MagicMock(), MagicMock())))
+    with patch.object(validation, "open_serial_connection", serial.open_serial_connection):
+        yield serial
 
 
 async def test_crestron_serial(hass, fake_serial, no_setup):

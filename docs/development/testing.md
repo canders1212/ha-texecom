@@ -11,14 +11,14 @@ The two suites need different Pythons, so use two virtual environments:
 ```bash
 # Driver tests: Python 3.13, no Home Assistant
 python3.13 -m venv .venv-driver
-.venv-driver/bin/pip install pytest pytest-asyncio ruff
+.venv-driver/bin/pip install pytest pytest-asyncio ruff "pyserial-asyncio-fast>=0.11"
 .venv-driver/bin/pytest tests --ignore=tests/ha
 .venv-driver/bin/ruff check .
 .venv-driver/bin/ruff format --check .
 
 # Home Assistant tests: Python 3.14, inside Home Assistant 2026.9.4
 python3.14 -m venv .venv-ha
-.venv-ha/bin/pip install "pytest-homeassistant-custom-component==0.13.367"
+.venv-ha/bin/pip install "pytest-homeassistant-custom-component==0.13.367" "pyserial-asyncio-fast>=0.11"
 .venv-ha/bin/pytest tests/ha
 ```
 
