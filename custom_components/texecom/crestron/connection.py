@@ -105,7 +105,7 @@ class ConnectionMixin:
             self._splitter.reset()
             try:
                 reader, writer = await self._open()
-            except (OSError, TimeoutError, ImportError) as err:
+            except Exception as err:  # any failure to open (e.g. a path pyserial won't take): retry
                 self.last_error = f"cannot open {self.description}: {err}"
                 failures += 1
                 if failures == QUIET_FAILURES + 1:

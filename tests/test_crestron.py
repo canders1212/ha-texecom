@@ -618,6 +618,35 @@ async def test_a_bridge_thats_down_gives_one_warning_not_one_per_attempt(caplog)
         await panel.stop()
 
 
+async def test_any_error_opening_the_port_is_retried(monkeypatch):
+    """Not only the usual ones: a serial path pyserial won't take raises
+    ValueError, which used to end the connection loop without a word."""
+    from custom_components.texecom.crestron import connection
+
+    attempts = []
+
+    async def refuse(**_kwargs):
+        attempts.append(1)
+        raise ValueError("not a valid port")
+
+    monkeypatch.setattr(connection, "open_serial_connection", refuse)
+    panel = CrestronPanel(
+        part_arms={"night": 1, "home": 0},
+        zones=[],
+        areas=[PanelArea(1, "Area A")],
+        udl=None,
+        serial_device="/dev/nothing",
+        status_poll=0,
+        reconnect_min=0.01,
+    )
+    await panel.start()
+    try:
+        await wait_for(lambda: len(attempts) >= 3)
+        assert "not a valid port" in panel.last_error
+    finally:
+        await panel.stop()
+
+
 async def test_the_connection_closing_during_a_command_says_not_connected():
     """Not "the panel didn't accept the request": the link dropped, and it
     reconnects by itself."""
