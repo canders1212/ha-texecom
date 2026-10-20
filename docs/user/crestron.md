@@ -23,7 +23,7 @@ At the keypad: engineer code → *UDL/Digi Options* → 8 *Com Port Setup* → c
 **Settings → Devices & services → Add integration → Texecom → Crestron**, then:
 
 - **Over the network**: the adapter's IP address and port (often 23), the UDL code (optional), and how many zones and areas you have. Home Assistant checks the panel answers before it saves.
-- **Serial cable**: the device path (a `/dev/serial/by-id/…` path survives restarts), the speed set for the COM port (often 19200), the UDL code (optional), and the zone and area counts.
+- **Serial cable**: the device path (a `/dev/serial/by-id/…` path survives restarts; an adapter on the network goes under **Over the network** instead), the speed set for the COM port (often 19200), the UDL code (optional), and the zone and area counts.
 
 Then choose your arm modes, as for Texecom Connect.
 

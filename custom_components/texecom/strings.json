@@ -143,6 +143,7 @@
       "no_reply": "Connected, but the panel didn't answer. Check the COM port is set to Crestron System and the speed matches.",
       "same_part_arm": "Two buttons can't use the same part arm.",
       "cannot_open_serial": "Couldn't open that serial device. Check the path (a /dev/serial/by-id/… path survives restarts) and that nothing else is using it.",
+      "serial_is_network": "That's a network address, not a serial device. For an adapter on the network, choose **Over the network** when adding the panel, with the adapter's IP address and port.",
       "unknown": "Something unexpected went wrong. The details are in Home Assistant's log (Settings → System → Logs): please report it on the integration's GitHub page."
     },
     "abort": {

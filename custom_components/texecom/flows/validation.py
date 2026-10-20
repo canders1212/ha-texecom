@@ -115,6 +115,11 @@ async def validate_crestron_network(host: str, port: int) -> str | None:
 
 async def validate_serial(device: str, baud_rate: int) -> str | None:
     """Checks the serial device opens (its owner or path is the usual problem)."""
+    if "://" in device:
+        # The serial library also takes addresses such as socket://host:port,
+        # but connects to them blocking the event loop (up to 5 s, on every
+        # reconnect): the network option is the way to reach an adapter.
+        return "serial_is_network"
     try:
         _reader, writer = await asyncio.wait_for(open_serial_connection(url=device, baudrate=baud_rate), 10)
     except (OSError, TimeoutError, ImportError, ValueError) as err:

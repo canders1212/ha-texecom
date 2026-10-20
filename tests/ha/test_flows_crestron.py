@@ -130,3 +130,16 @@ async def test_crestron_serial_unexpected_error(hass, fake_serial, no_setup):
         {"serial_device": "/dev/ttyUSB0", "baud_rate": "19200", "zone_count": 8, "area_count": 1},
     )
     assert result["errors"] == {"base": "unknown"}
+
+
+async def test_crestron_serial_refuses_a_network_address(hass, fake_serial, no_setup):
+    """The serial library also takes addresses like socket://host:port, but
+    then connects without letting Home Assistant do anything else meanwhile
+    (up to 5 s, on every reconnect): the network option is the way for that."""
+    result = await start(hass, "crestron", "crestron_serial")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"serial_device": "socket://192.0.2.10:23", "baud_rate": "19200", "zone_count": 8, "area_count": 1},
+    )
+    assert result["errors"] == {"base": "serial_is_network"}
+    fake_serial.open_serial_connection.assert_not_awaited()
