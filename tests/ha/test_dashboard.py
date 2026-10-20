@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from fake_connect_panel import DEMO_ZONES, FakeConnectPanel
+from homeassistant.config_entries import ConfigEntryState
 
 from custom_components.texecom.dashboard import async_create_dashboard, build_config
 
-from .common import setup_connect
+from .common import ALARM, setup_connect
 
 
 async def test_dashboard_layout(hass, fake):
@@ -120,4 +123,50 @@ async def test_upgrading_lets_an_older_dashboards_buttons_follow_arm_buttons(has
     alarm = next(c for c in left["cards"] if c.get("entity") == "alarm_control_panel.texecom_house")
     assert alarm["features"][0]["modes"] == MODES
     assert {"type": "markdown", "content": "Mine"} in right["cards"]
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_whatever_goes_wrong_with_the_dashboard_the_alarm_still_loads(hass, fake):
+    """Making the dashboard reaches into Home Assistant's dashboards, which can
+    change in any release. Whatever goes wrong there, setup carries on without
+    the dashboard, and doesn't try again at each start."""
+    import voluptuous as vol
+    from homeassistant.components.lovelace.dashboard import DashboardsCollection
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "lovelace", {})
+    refused = vol.Invalid("Url path is already in use")
+    with patch.object(DashboardsCollection, "async_create_item", side_effect=refused):
+        entry = await setup_connect(hass, fake, data={"create_dashboard": True})
+    assert entry.state is ConfigEntryState.LOADED
+    assert hass.states.get(ALARM) is not None
+    assert "create_dashboard" not in entry.data
+    assert [url for url in hass.data["lovelace"].dashboards if url] == []
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_whatever_goes_wrong_with_the_dashboard_upgrading_carries_on(hass, fake):
+    """Upgrading from before 0.2.12 updates the dashboard's buttons; if Home
+    Assistant's dashboards won't take it, the upgrade and setup still finish."""
+    from homeassistant.components.lovelace.dashboard import LovelaceStorage
+    from homeassistant.setup import async_setup_component
+
+    from custom_components.texecom.config_flow import TexecomConfigFlow
+
+    assert await async_setup_component(hass, "lovelace", {})
+    entry = await setup_connect(hass, fake)
+    url = await async_create_dashboard(hass, entry)
+    dashboard = hass.data["lovelace"].dashboards[url]
+    config = await dashboard.async_load(False)
+    alarm = next(c for c in config["views"][0]["sections"][0]["cards"] if c.get("entity") == ALARM)
+    alarm["features"][0]["modes"] = ["armed_away", "disarmed"]  # as 0.2.9 made it
+    await dashboard.async_save(config)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    hass.config_entries.async_update_entry(entry, minor_version=2)
+
+    with patch.object(LovelaceStorage, "async_save", side_effect=RuntimeError("changed internals")):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == TexecomConfigFlow.MINOR_VERSION
     assert await hass.config_entries.async_unload(entry.entry_id)

@@ -4,7 +4,8 @@ Home Assistant has no public API for an integration to add a dashboard, so
 this reaches the dashboards collection through the websocket command the
 frontend uses. If that ever changes, creating the dashboard fails with a
 message pointing to the README's copy-and-paste version; nothing else is
-affected.
+affected. So any error from Home Assistant's dashboards is caught here,
+whatever its type: none may stop the alarm loading or upgrading.
 """
 
 from __future__ import annotations
@@ -163,7 +164,7 @@ async def async_create_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> str
                 }
             )
         await lovelace.dashboards[url_path].async_save(build_config(hass, entry))
-    except (KeyError, AttributeError, TypeError, IndexError) as err:
+    except Exception as err:  # Home Assistant's internals: anything may have changed (see above)
         _LOGGER.warning("Couldn't add the Alarm dashboard (%r); the README has a copy-and-paste version", err)
         raise HomeAssistantError("couldn't add the dashboard") from err
     _LOGGER.info("Added the Alarm dashboard at /%s", url_path)
@@ -174,7 +175,15 @@ async def async_update_alarm_buttons(hass: HomeAssistant, entry: ConfigEntry) ->
     """Dashboards made before 0.2.12 listed only the modes the alarm had then:
     lists every mode on this panel's alarm cards so they follow Configure →
     Arm buttons, keeping everything else the user changed. Lists the user
-    reordered or added to are left alone."""
+    reordered or added to are left alone. If Home Assistant's dashboards
+    won't have it, the upgrade carries on without."""
+    try:
+        await _update_alarm_buttons(hass, entry)
+    except Exception as err:  # Home Assistant's internals: anything may have changed (see above)
+        _LOGGER.warning("Couldn't update the Alarm dashboard's buttons (%r); refreshing it in Configure will", err)
+
+
+async def _update_alarm_buttons(hass: HomeAssistant, entry: ConfigEntry) -> None:
     try:
         dashboards = hass.data["lovelace"].dashboards
     except (KeyError, AttributeError):
