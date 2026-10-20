@@ -152,6 +152,7 @@ class CrestronPanel(ConnectionMixin, TexecomPanel):
         self._deferred: dict[int, asyncio.TimerHandle] = {}
         self._arming_since: dict[int, float] = {}
         self.last_error: str | None = None
+        self._warned = False
 
     @property
     def can_control(self) -> bool:

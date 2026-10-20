@@ -55,6 +55,8 @@ Check:
 2. Its address hasn't changed (look in your router). If it has, use **Reconfigure** (above).
 3. Nothing else is connected to it: the Texecom app, Homebridge, texecom2mqtt, or a second Home Assistant.
 
+**Crestron:** the notice also comes when the adapter is reachable but the panel says nothing (*the connection opens, but the panel isn't answering*): check the panel has power, the cable between the adapter and the panel, the adapter's serial speed, and that the COM port is still set to *Crestron System*.
+
 Just after an alarm, a drop is normal: the SmartCom closes the connection to report the alarm and turns Home Assistant away for about two minutes. The log says *the panel closed the connection after the alarm*, and the alarm's entities keep their state meanwhile.
 
 ## Getting more detail

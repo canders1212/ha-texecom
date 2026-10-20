@@ -27,7 +27,9 @@ CONNECT_TIMEOUT = 10.0
 RECONNECT_MIN = 5.0
 RECONNECT_MAX = 30.0
 # A bridge that's down fails every attempt: the first few failures in a row
-# are logged at debug level, then one warning.
+# are logged at debug level, then one warning (one per outage, until the panel
+# answers again). A bridge that's up in front of a panel that's off or
+# unplugged takes the connection and says nothing: that's a failure too.
 QUIET_FAILURES = 3
 # Measured: the text feed resumes ~30 s after a Wintex logout.
 POST_LOGOUT_BLACKOUT = 35.0
@@ -88,6 +90,7 @@ class ConnectionMixin:
     _connect_without_ok: bool  # this panel answers Connect after a login with no OK
     _short_wait_ok: bool  # False once a short login wait has proved too short (for this run)
     read_login_wait: float
+    _warned: bool  # this outage has had its warning
 
     @property
     def description(self) -> str:
@@ -98,28 +101,25 @@ class ConnectionMixin:
             return await open_serial_connection(url=self.serial_device, baudrate=self.baud_rate)
         return await asyncio.wait_for(asyncio.open_connection(self.host, self.port), CONNECT_TIMEOUT)
 
+    def _warn_once(self, message: str, *args: Any) -> None:
+        """A warning, unless this outage has had one: then debug level."""
+        _LOGGER.log(logging.DEBUG if self._warned else logging.WARNING, message, *args)
+        self._warned = True
+
     async def _run(self) -> None:
         delay = self.reconnect_min
-        failures = 0
+        failures = 0  # attempts in a row that didn't reach the panel
         while not self._stopped:
             self._splitter.reset()
+            answered = False
             try:
                 reader, writer = await self._open()
             except Exception as err:  # any failure to open (e.g. a path pyserial won't take): retry
-                self.last_error = f"cannot open {self.description}: {err}"
-                failures += 1
-                if failures == QUIET_FAILURES + 1:
-                    _LOGGER.warning("Crestron: %s; still trying", self.last_error)
-                else:
-                    _LOGGER.debug("Crestron: %s; retrying", self.last_error)
+                self.last_error = problem = f"cannot open {self.description}: {err}"
             else:
-                failures = 0
                 self._writer = writer
                 self._last_data = time.monotonic()
-                self.last_error = None
-                delay = self.reconnect_min
-                _LOGGER.info("Crestron: connected via %s", self.description)
-                self.set_connected(True)
+                _LOGGER.debug("Crestron: %s open; waiting for the panel to answer", self.description)
                 poller = asyncio.get_running_loop().create_task(self._poll_loop())
                 try:
                     while True:
@@ -127,6 +127,15 @@ class ConnectionMixin:
                         if not data:
                             break
                         self._last_data = time.monotonic()
+                        if not answered:
+                            # Connected once the panel says something (it
+                            # answers the ASTATUS sent on connect): the
+                            # connection opening only proves the bridge is up.
+                            answered = True
+                            failures, delay, self._warned = 0, self.reconnect_min, False
+                            self.last_error = None
+                            _LOGGER.info("Crestron: connected via %s", self.description)
+                            self.set_connected(True)
                         self._splitter.push(data)
                 except OSError as err:
                     _LOGGER.info("Crestron: connection error: %s", err)
@@ -139,10 +148,19 @@ class ConnectionMixin:
                     self.set_connected(False)
                     for waiter in list(self._waiters):
                         waiter("closed", None)
-                if not self._stopped:
+                if not answered:
+                    self.last_error = "the connection opens, but the panel isn't answering"
+                    problem = f"{self.last_error} ({self.description})"
+                elif not self._stopped:
                     _LOGGER.info("Crestron: connection to %s closed; reconnecting", self.description)
             if self._stopped:
                 break
+            if not answered:
+                failures += 1
+                if failures > QUIET_FAILURES:
+                    self._warn_once("Crestron: %s; still trying", problem)
+                else:
+                    _LOGGER.debug("Crestron: %s; retrying", problem)
             await asyncio.sleep(delay)
             delay = min(delay * 2, max(RECONNECT_MAX, self.reconnect_min))
 
@@ -166,6 +184,10 @@ class ConnectionMixin:
         check (a TCP connection only proves the bridge is up) and a correction
         for missed arm/disarm events."""
         self._first_status_pending = True
+        if self.in_blackout:
+            # Just after a UDL session the feed is silent: ask once it's back,
+            # as the answer is what shows the panel is there.
+            await asyncio.sleep(self._blackout_until - time.monotonic())
         self.send_query("ASTATUS")
         if self.status_poll <= 0:
             return
@@ -175,7 +197,10 @@ class ConnectionMixin:
                 continue
             quiet = time.monotonic() - max(self._last_data, self._blackout_until)
             if quiet > SILENT_POLLS_BEFORE_RECONNECT * self.status_poll:
-                _LOGGER.warning("Crestron: no reply from the panel for %.0f s; reconnecting", quiet)
+                if self.connected:
+                    self._warn_once("Crestron: no reply from the panel for %.0f s; reconnecting", quiet)
+                else:
+                    _LOGGER.debug("Crestron: still no answer after %.0f s; reconnecting", quiet)
                 if self._writer:
                     self._writer.close()
                 return

@@ -92,6 +92,11 @@ class FakeCrestronPort:
         self.received: list[bytes] = []
         self.connect_received: list[tuple[int, bytes]] = []  # (command, body)
         self.writers: set[asyncio.StreamWriter] = set()
+        # An adapter whose panel is off or unplugged: silent takes the
+        # connection and says nothing; hang_up closes it at once.
+        self.silent = False
+        self.hang_up = False
+        self.connections: list[float] = []  # when each connection came in
 
     def add_log(self, log_type: int, parameter: int = 0, group: int = 0, areas: int = 1) -> None:
         stamp = 35 | 11 << 6 | 10 << 12 | 13 << 16 | 18 << 21 | 26 << 26  # 13:11:35 18/10/2026
@@ -165,9 +170,14 @@ class FakeCrestronPort:
 
     async def _client(self, reader, writer) -> None:
         self.writers.add(writer)
+        self.connections.append(asyncio.get_running_loop().time())
         buf = b""
         try:
+            if self.hang_up:
+                return
             while data := await reader.read(256):
+                if self.silent:
+                    continue
                 buf += data
                 while buf:
                     if buf.startswith(b"ASTATUS\r\n"):
@@ -627,6 +637,101 @@ async def test_a_bridge_thats_down_gives_one_warning_not_one_per_attempt(caplog)
         await wait_for(lambda: sum("cannot open" in r.getMessage() for r in caplog.records) >= 6)
         warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
         assert len(warnings) == 1 and "still trying" in warnings[0]
+    finally:
+        await panel.stop()
+
+
+def silent_bridge_panel(number: int, **kwargs) -> CrestronPanel:
+    opts = {"status_poll": 0.05, "reconnect_min": 0.01, **kwargs}
+    return CrestronPanel(
+        part_arms={"night": 1, "home": 0},
+        zones=[],
+        areas=[PanelArea(1, "Area A")],
+        udl=None,
+        host="127.0.0.1",
+        port=number,
+        **opts,
+    )
+
+
+async def test_a_silent_panel_behind_a_live_adapter_never_counts_as_connected(caplog):
+    """The adapter taking the connection only shows the adapter is up. With
+    the panel off or unplugged, a reconnect mustn't look like the panel is
+    back, or entities stay available with frozen states and the offline
+    notice never comes; and it's one warning, not one every few minutes."""
+    caplog.set_level("DEBUG", logger="custom_components.texecom")
+    fake = FakeCrestronPort()
+    fake.silent = True
+    number = await fake.start()
+    panel = silent_bridge_panel(number)
+    since = panel.disconnected_since
+    seen: list[bool] = []
+    panel.add_listener(lambda: seen.append(panel.connected))
+    await panel.start()
+    try:
+        await wait_for(lambda: len(fake.connections) >= 6)
+        assert not panel.connected and True not in seen
+        assert panel.disconnected_since == since  # the offline time keeps counting
+        assert "isn't answering" in panel.last_error
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1, warnings
+    finally:
+        await panel.stop()
+        await fake.close()
+
+
+async def test_an_adapter_that_hangs_up_at_once_backs_off_and_warns_once(caplog):
+    caplog.set_level("DEBUG", logger="custom_components.texecom")
+    fake = FakeCrestronPort()
+    fake.hang_up = True
+    number = await fake.start()
+    panel = silent_bridge_panel(number, status_poll=0)
+    seen: list[bool] = []
+    panel.add_listener(lambda: seen.append(panel.connected))
+    await panel.start()
+    try:
+        await wait_for(lambda: len(fake.connections) >= 6)
+        assert True not in seen
+        gaps = [b - a for a, b in zip(fake.connections, fake.connections[1:], strict=False)]
+        assert gaps[-1] > 4 * gaps[0]  # backing off, not retrying flat out
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1 and "still trying" in warnings[0], warnings
+    finally:
+        await panel.stop()
+        await fake.close()
+
+
+async def test_a_panel_that_goes_quiet_warns_once_and_is_back_when_it_answers(caplog, port):
+    caplog.set_level("DEBUG", logger="custom_components.texecom")
+    fake, number = port
+    panel = await make_panel(number, status_poll=0.05, reconnect_min=0.01)
+    try:
+        fake.silent = True
+        await wait_for(lambda: not panel.connected)
+        reconnects = len(fake.connections)
+        await wait_for(lambda: len(fake.connections) >= reconnects + 5)
+        assert not panel.connected
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1 and "no reply from the panel" in warnings[0], warnings
+        fake.silent = False
+        await wait_for(lambda: panel.connected)
+    finally:
+        await panel.stop()
+
+
+async def test_the_first_status_check_waits_for_the_end_of_a_session(port):
+    """A reconnect just after a UDL session: the panel's feed is silent until
+    it resumes, so the status check that shows it's answering is sent then
+    (with polling off it's the only one)."""
+    fake, number = port
+    panel = await make_panel(number, blackout=0.3)
+    try:
+        await panel.disarm(1)
+        for w in list(fake.writers):
+            w.close()  # the adapter drops the connection during the silence
+        await wait_for(lambda: not panel.connected)
+        await wait_for(lambda: panel.connected, timeout=2)
+        assert fake.received.count(b"ASTATUS") == 2
     finally:
         await panel.stop()
 
