@@ -34,6 +34,7 @@ WINTEX_NAK = 0x0F
 # A partial frame is waited for only up to this many bytes, so stray bytes
 # that look like a frame's start can't hold up the text lines behind them.
 MAX_PENDING_FRAME = 64  # the replies inside a session are a few bytes
+MAX_LINE = 1024  # far longer than any line the port sends
 
 _AREA_RE = re.compile(r'^"([ADLXE])(\d{3})(\d*)')
 _USER_RE = re.compile(r'^"U(\d{3})')
@@ -189,6 +190,8 @@ class LineSplitter:
                 return
             end = re.search(rb"\r?\n", self.buffer)
             if not end:
+                if len(self.buffer) > MAX_LINE:  # never a line (a serial port at the wrong speed?)
+                    self.buffer = b""
                 return
             line, self.buffer = self.buffer[: end.start()], self.buffer[end.end() :]
             text = line.decode("latin1")

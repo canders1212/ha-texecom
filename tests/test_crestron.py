@@ -349,6 +349,19 @@ def test_a_blank_line_doesnt_hold_up_the_next_line():
     assert [line.strip() for line in lines] == ['"Z0010', '"Z0021']  # parse_line strips the stray CR
 
 
+def test_a_port_that_never_ends_a_line_doesnt_fill_up_memory():
+    """With no CR or LF (a serial port at the wrong speed, say), what's waiting
+    to become a line is dropped once it's longer than any line, and the lines
+    after it still come through."""
+    lines = []
+    splitter = P.LineSplitter(lines.append, lambda _f: None)
+    for _ in range(100):
+        splitter.push(b"x" * 100)
+    assert len(splitter.buffer) <= P.MAX_LINE
+    splitter.push(b'\r\n"Z0011\r\n')
+    assert lines[-1] == '"Z0011'
+
+
 async def test_refused_disarm_falls_back_to_connect_inside_the_session():
     fake = FakeCrestronPort(elite168=True)
     number = await fake.start()
