@@ -2,7 +2,7 @@
 
 This takes about ten minutes. You don't need to edit any files.
 
-**On this page:** [Before you start](#before-you-start) · [1. Find your SmartCom](#1-find-your-smartcoms-address) · [2. Install](#2-install-from-hacs) · [3. Add the integration](#3-add-the-integration) · [4. Arm modes](#4-choose-your-arm-modes) · [5. Finish off](#5-finish-off) · [Part arms explained](#part-arms-explained) · [Coming from Homebridge or texecom2mqtt](#coming-from-homebridge-or-texecom2mqtt)
+**On this page:** [Before you start](#before-you-start) · [1. Find your SmartCom](#1-find-your-smartcoms-address) · [2. Install](#2-install-from-hacs-or-the-marketplace) · [3. Add the integration](#3-add-the-integration) · [4. Arm modes](#4-choose-your-arm-modes) · [5. Finish off](#5-finish-off) · [Part arms explained](#part-arms-explained) · [Coming from Homebridge or texecom2mqtt](#coming-from-homebridge-or-texecom2mqtt)
 
 ## Before you start
 
@@ -12,7 +12,7 @@ You need:
 |---|---|
 | 🏠 | A Texecom **Premier Elite** panel with a **SmartCom** (the box the Texecom app uses) or a **ComIP** |
 | 🔢 | The panel's **UDL code**: its remote-access code, not your keypad code. Texecom's default is **1234**, and most panels keep it |
-| 🏡 | **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz) installed |
+| 🏡 | **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz) installed (from 2026.11 it's built in, as the *Marketplace*) |
 
 > ℹ️ **The SmartCom talks to one thing at a time.** While Home Assistant is connected, the Texecom app can't connect. Your alarm works exactly as before, and the app's alarm notifications still reach your phone. If **Homebridge** or **texecom2mqtt** use your SmartCom, turn them off first.
 
@@ -24,15 +24,21 @@ Open your router's list of connected devices and find the SmartCom. Note its **I
 
 While you're there, **reserve** that address (routers call it *address reservation*, *static lease* or *DHCP reservation*), so it never changes. If it changes later, Home Assistant loses the panel until you tell it the new one.
 
-## 2. Install from HACS
+## 2. Install from HACS or the Marketplace
 
-1. Click this button, which opens HACS in your Home Assistant with this integration ready to add:
+From Home Assistant 2026.11, HACS is built into Home Assistant as the **Marketplace** (**Settings → Marketplace**). Either way, start with this button, which opens your Home Assistant with this integration ready to add:
 
-   [![Open your Home Assistant and add this repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
+[![Open your Home Assistant and add this repository to HACS or the Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
 
-   (Or in HACS: **⋮ → Custom repositories**, add `https://github.com/metaljay/ha-texecom` with type **Integration**.)
-2. Search HACS for **Texecom Premier Elite** and click **Download**.
-3. **Restart Home Assistant** (**Settings → System → ⏻ → Restart**).
+**With HACS** (Home Assistant 2026.10 and older):
+
+1. Click **Download**. (Or in HACS: **⋮ → Custom repositories**, add `https://github.com/metaljay/ha-texecom` with type **Integration**, then search for **Texecom Premier Elite**.)
+2. **Restart Home Assistant** (**Settings → System → ⏻ → Restart**).
+
+**With the Marketplace** (Home Assistant 2026.11 and newer):
+
+1. Click **Install**, then **Install** again. Until this integration is listed in the Marketplace, it first asks you to connect a GitHub account (it only reads public information). (Or in **Settings → Marketplace**: **Add from link**, enter `metaljay/ha-texecom`, select **Add**, then open it.)
+2. No restart is needed: the Texecom setup usually opens by itself. If it doesn't, carry on below.
 
 ## 3. Add the integration
 

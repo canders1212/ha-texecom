@@ -4,7 +4,7 @@
 
 | Page | What's in it |
 |---|---|
-| [Setting it up](user/setup.md) | Installing from HACS, adding the integration, part arms, coming from Homebridge |
+| [Setting it up](user/setup.md) | Installing from HACS or the Marketplace, adding the integration, part arms, coming from Homebridge |
 | [Using it](user/using.md) | The alarm's states, the sensors, the Alarm dashboard, options, notifications, the activity list, codes, good to know |
 | [Apple Home](user/apple-home.md) | The alarm in the Home app through HomeKit Bridge |
 | [Automations](user/automations.md) | One-click automations (arm when everyone leaves, alerts on your phone), the `texecom_event` events |

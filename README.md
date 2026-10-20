@@ -2,9 +2,9 @@
 
 # Texecom Premier Elite for Home Assistant
 
-Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home), through the **SmartCom** you already have. Install it from HACS, type your SmartCom's address, and Home Assistant reads your zones from the panel. No add-on, no MQTT, no files to edit.
+Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home), through the **SmartCom** you already have. Install it from HACS (or the Marketplace, from Home Assistant 2026.11), type your SmartCom's address, and Home Assistant reads your zones from the panel. No add-on, no MQTT, no files to edit.
 
-[![Open your Home Assistant and add this repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
+[![Open your Home Assistant and add this repository to HACS or the Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
 
 > **Unofficial.** Not made or supported by Texecom. Tested on a Premier Elite 24 (firmware V6.05.03) with a SmartCom. **Tried it on another panel? [Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if it all worked.
 
@@ -25,14 +25,14 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 
 - A Texecom **Premier Elite** panel with a **SmartCom** (the box the Texecom app uses) or a **ComIP**.
 - The panel's **UDL code** (its remote-access code). Texecom's default is **1234**, and most panels keep it.
-- **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz).
+- **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz) (from 2026.11 it's built in, as the *Marketplace*).
 
 > ℹ️ The SmartCom talks to one thing at a time: while Home Assistant is connected, the Texecom app can't. Your alarm (and the app's alarm notifications) carry on as normal. Turn off Homebridge or texecom2mqtt first if you use them.
 
 ## 🚀 Set it up in four steps
 
 1. **Find your SmartCom's address** in your router's list of devices (something like `192.168.1.50`), and reserve it so it never changes.
-2. **Install**: click **Add to HACS** above, then **Download**, then restart Home Assistant.
+2. **Install**: click the button above, then **Download** and restart Home Assistant (HACS), or **Install** (the Marketplace, Home Assistant 2026.11 and newer).
 3. **Add the integration**: click below, choose **Texecom Connect**, and enter the address and UDL code (leave the port at 10001).
 
    [![Open your Home Assistant and start setting up Texecom](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=texecom)

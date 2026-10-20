@@ -177,7 +177,7 @@ Only when the owner asks. Patch increments (0.2.3, 0.2.4…).
 1. Everything is merged to `main`, CI is green, and the change was checked on the owner's test Home Assistant (and the real panel if it touched the driver).
 2. Bump `version` in `custom_components/texecom/manifest.json`, commit (*"0.2.3"*), push.
 3. Create a GitHub release tagged `v0.2.3` with plain-English notes: what's new, what's fixed, anything users need to do. (The release workflow checks the tag matches `manifest.json`.)
-4. HACS offers the update to everyone; update the owner's Home Assistant through HACS and restart.
+4. HACS (built into Home Assistant 2026.11 and newer as the Marketplace) offers the update to everyone; update the owner's Home Assistant there and restart.
 
 ---
 
