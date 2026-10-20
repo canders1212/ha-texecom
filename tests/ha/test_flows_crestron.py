@@ -82,6 +82,19 @@ async def test_crestron_hang_up_is_no_reply_at_once(hass, crestron_port, no_setu
     assert loop.time() - started < 1
 
 
+async def test_crestron_address_typo(hass, socket_enabled, no_setup):
+    """A typo in the address (what Python raises for one; the tests can't
+    look addresses up) is "couldn't connect", not "unknown error"."""
+    result = await start(hass, "crestron", "crestron_network")
+    with patch(
+        "asyncio.open_connection", side_effect=UnicodeEncodeError("idna", "192.168.1..5", 10, 11, "label empty")
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"host": "192.168.1..5", "port": 23, "zone_count": 5, "area_count": 1}
+        )
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
 @pytest.fixture
 def fake_serial():
     """serial_asyncio_fast stand-in: opens fine unless told otherwise."""
@@ -110,3 +123,13 @@ async def test_crestron_serial_cannot_open(hass, fake_serial, no_setup):
         {"serial_device": "/dev/ttyUSB9", "baud_rate": "19200", "zone_count": 8, "area_count": 1},
     )
     assert result["errors"] == {"base": "cannot_open_serial"}
+
+
+async def test_crestron_serial_unexpected_error(hass, fake_serial, no_setup):
+    fake_serial.open_serial_connection.side_effect = RuntimeError("surprise")
+    result = await start(hass, "crestron", "crestron_serial")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"serial_device": "/dev/ttyUSB0", "baud_rate": "19200", "zone_count": 8, "area_count": 1},
+    )
+    assert result["errors"] == {"base": "unknown"}

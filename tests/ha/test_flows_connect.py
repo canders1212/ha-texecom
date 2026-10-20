@@ -56,6 +56,40 @@ async def test_connect_unreachable(hass, socket_enabled, no_setup):
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+async def test_connect_address_typo(hass, socket_enabled, no_setup):
+    """An address that can't be one (a typo) is "couldn't connect, check the
+    address", not "unknown error". (What Python raises for it; the tests
+    can't look addresses up.)"""
+    from unittest.mock import patch
+
+    result = await start(hass, "connect")
+    with patch(
+        "asyncio.open_connection", side_effect=UnicodeEncodeError("idna", "192.168.1..5", 10, 11, "label empty")
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"host": "192.168.1..5", "port": 10001, "udl": UDL}
+        )
+        result = await after_progress(hass, result)
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_connect_unexpected_error(hass, socket_enabled, no_setup, caplog):
+    """Anything else unexpected says so on the screen, with the details in the
+    log. (It fails at once, before the check has waited for anything: the
+    progress screen must still come first, or Home Assistant submits the
+    form again and again, frozen.)"""
+    from unittest.mock import patch
+
+    result = await start(hass, "connect")
+    with patch("custom_components.texecom.flows.validation.probe", side_effect=RuntimeError("surprise")):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"host": "127.0.0.1", "port": free_port(), "udl": UDL}
+        )
+        result = await after_progress(hass, result)
+    assert result["errors"] == {"base": "unknown"}
+    assert "surprise" in caplog.text
+
+
 async def test_connect_then_corrected(hass, fake, no_setup):
     """A wrong code, then the right one: the second try goes through."""
     result = await start(hass, "connect")

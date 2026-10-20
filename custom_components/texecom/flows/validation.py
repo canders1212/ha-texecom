@@ -60,13 +60,20 @@ def udl_valid(udl: str) -> bool:
 
 async def validate_connect(host: str, port: int, udl: str) -> tuple[dict[str, Any] | None, str | None]:
     """Logs in and reads the panel's zones and areas: (data, error key)."""
+    # Lets the "Connecting…" screen show first, however fast this fails: a
+    # check already finished when the screen asks makes Home Assistant submit
+    # the form again, which would check again, and so on, freezing it.
+    await asyncio.sleep(0)
     try:
         info, zones, areas = await asyncio.wait_for(probe(host, port, udl), 180)
     except LoginRejected:
         return None, "invalid_auth"
-    except (ConnectError, TimeoutError, OSError) as err:
+    except (ConnectError, TimeoutError, OSError, ValueError) as err:  # ValueError: an address typo
         _LOGGER.debug("Connect probe failed: %s", err)
         return None, "cannot_connect"
+    except Exception:
+        _LOGGER.exception("Unexpected error checking the panel")
+        return None, "unknown"
     if not zones:
         return None, "no_zones"
     return {**layout_to_data(info, zones, areas)}, None
@@ -76,8 +83,11 @@ async def validate_crestron_network(host: str, port: int) -> str | None:
     """Opens the connection and checks the panel answers ASTATUS."""
     try:
         reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), 10)
-    except (OSError, TimeoutError):
+    except (OSError, TimeoutError, ValueError):  # ValueError: an address typo
         return "cannot_connect"
+    except Exception:
+        _LOGGER.exception("Unexpected error opening %s:%s", host, port)
+        return "unknown"
     try:
         writer.write(b"ASTATUS\r\n")
         data = b""
@@ -93,6 +103,9 @@ async def validate_crestron_network(host: str, port: int) -> str | None:
         return None if b'"' in data else "no_reply"
     except OSError:
         return "cannot_connect"
+    except Exception:
+        _LOGGER.exception("Unexpected error checking %s:%s", host, port)
+        return "unknown"
     finally:
         writer.close()
         with contextlib.suppress(Exception):
@@ -108,7 +121,12 @@ async def validate_serial(device: str, baud_rate: int) -> str | None:
     except (OSError, TimeoutError, ImportError, ValueError) as err:
         _LOGGER.debug("Opening %s failed: %s", device, err)
         return "cannot_open_serial"
+    except Exception:
+        _LOGGER.exception("Unexpected error opening %s", device)
+        return "unknown"
     writer.close()
+    with contextlib.suppress(Exception):
+        await writer.wait_closed()
     return None
 
 

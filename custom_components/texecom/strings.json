@@ -142,7 +142,8 @@
       "no_zones": "Connected, but the panel reported no zones in use.",
       "no_reply": "Connected, but the panel didn't answer. Check the COM port is set to Crestron System and the speed matches.",
       "same_part_arm": "Two buttons can't use the same part arm.",
-      "cannot_open_serial": "Couldn't open that serial device. Check the path (a /dev/serial/by-id/… path survives restarts) and that nothing else is using it."
+      "cannot_open_serial": "Couldn't open that serial device. Check the path (a /dev/serial/by-id/… path survives restarts) and that nothing else is using it.",
+      "unknown": "Something unexpected went wrong. The details are in Home Assistant's log (Settings → System → Logs): please report it on the integration's GitHub page."
     },
     "abort": {
       "already_configured": "This panel is already set up.",
