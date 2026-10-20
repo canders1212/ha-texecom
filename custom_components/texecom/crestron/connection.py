@@ -9,7 +9,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from ..panel import PanelError, PanelNotConnected
@@ -29,11 +29,29 @@ RECONNECT_MAX = 30.0
 QUIET_FAILURES = 3
 # Measured: the text feed resumes ~30 s after a Wintex logout.
 POST_LOGOUT_BLACKOUT = 35.0
+# Read-only sessions (power, the log) only use Texecom Connect, which works
+# whether or not the UDL login got its OK. Once this panel has shown that (a
+# Connect login ACKed after a login with no OK), they wait this long for the
+# OK instead of login_timeout, so a reading takes ~1 s rather than ~9 s.
+READ_LOGIN_WAIT = 1.0
+# At most this many stored log entries are read in one session (5 per read);
+# after a longer gap the oldest of them are skipped.
+MAX_LOG_CATCH_UP = 30
 SILENT_POLLS_BEFORE_RECONNECT = 3
 
 
 class CommandFailed(PanelError):
     pass
+
+
+class ConnectUnanswered(CommandFailed):
+    """No answer to the Texecom Connect login inside a UDL session: the
+    panel doesn't speak Connect on this port."""
+
+
+class CommandRefused(CommandFailed):
+    """The panel answered and said no (ERROR or NAK), as opposed to not
+    answering: only a refusal is safe to retry another way."""
 
 
 class ConnectionMixin:
@@ -58,6 +76,16 @@ class ConnectionMixin:
     _blackout_until: float
     _busy: bool
     _first_status_pending: bool
+    _connect_sequence: int
+    login_timeout: float
+    _log_pointer: int | None
+    panel_zones: int | None
+    log_entry_size: int | None
+    log_capacity: int | None
+    _login_ok: bool  # whether this session's UDL login got its OK
+    _connect_without_ok: bool  # this panel answers Connect after a login with no OK
+    _short_wait_ok: bool  # False once a short login wait has proved too short (for this run)
+    read_login_wait: float
 
     @property
     def description(self) -> str:
@@ -160,7 +188,13 @@ class ConnectionMixin:
 
     # ─── Commands ───────────────────────────────────────────────────────────
 
-    async def _expect(self, send: Callable[[], None], match: Callable[[str, Any], str | None], timeout: float) -> None:
+    async def _expect(
+        self,
+        send: Callable[[], None],
+        match: Callable[[str, Any], str | None],
+        timeout: float,
+        refused: type[CommandFailed] = CommandFailed,
+    ) -> None:
         """Sends and waits until match() returns "ok" or an error message."""
         loop = asyncio.get_running_loop()
         future: asyncio.Future[None] = loop.create_future()
@@ -175,7 +209,7 @@ class ConnectionMixin:
             if result == "ok":
                 future.set_result(None)
             elif result:
-                future.set_exception(CommandFailed(result))
+                future.set_exception(refused(result))
             return result is not None
 
         self._waiters.append(waiter)
@@ -195,7 +229,7 @@ class ConnectionMixin:
                 return "the panel rejected the command"
             return None
 
-        await self._expect(lambda: self._write(P.encode_command(command)), match, timeout)
+        await self._expect(lambda: self._write(P.encode_command(command)), match, timeout, CommandRefused)
 
     async def _send_frame(self, frame: bytes) -> None:
         def match(kind: str, reply: Any) -> str | None:
@@ -205,12 +239,64 @@ class ConnectionMixin:
                 return "the panel refused the command"
             return None
 
-        await self._expect(lambda: self._write(frame), match, COMMAND_TIMEOUT)
+        await self._expect(lambda: self._write(frame), match, COMMAND_TIMEOUT, CommandRefused)
 
-    async def _transaction(self, command: str | bytes, fallback: bytes | None) -> None:
-        """UDL login, one command, logout. A \\W<udl>/ login opens a Wintex
-        session that silences the text feed; logging out shortens that to
-        ~30 s. Transactions never overlap."""
+    def _on_connect_frame(self, frame: Any) -> None:
+        for waiter in list(self._waiters):
+            waiter("connect", frame)
+
+    async def _connect_request(self, command: int, body: bytes = b"") -> bytes:
+        """One Texecom Connect command inside the UDL session. Returns its
+        reply payload (after the echoed command byte)."""
+        sequence = self._connect_sequence
+        self._connect_sequence = (sequence + 1) & 0xFF
+        payload: list[bytes] = []
+
+        def match(kind: str, frame: Any) -> str | None:
+            if kind != "connect" or frame.type != P.C.TYPE_RESPONSE or frame.body[:1] != bytes([command]):
+                return None
+            payload.append(frame.body[1:])
+            return "ok"
+
+        await self._expect(lambda: self._write(P.connect_command(sequence, command, body)), match, COMMAND_TIMEOUT)
+        return payload[0]
+
+    async def _send_connect(self, command: int, body: bytes, refused: str) -> None:
+        """A Connect command whose reply is ACK or NAK."""
+        reply = await self._connect_request(command, body)
+        if reply[:1] == bytes([P.C.NAK]):
+            raise CommandRefused(refused)
+        if reply[:1] != bytes([P.C.ACK]):
+            raise CommandFailed(f"unexpected reply {reply.hex()} from the panel")
+
+    async def _connect_login(self) -> None:
+        """Texecom Connect login inside the UDL session, then (once per run)
+        the panel's identification: the zone count typed in at setup isn't
+        the panel's size, and the area bitmap and the log layout follow the
+        model, not the zones in use."""
+        try:
+            await self._send_connect(P.C.CMD_LOGIN, self.udl.encode("latin1"), "the panel refused the UDL code")
+        except CommandRefused:
+            raise
+        except CommandFailed as err:
+            raise ConnectUnanswered(f"no answer to the Texecom Connect login ({err})") from err
+        if not self._login_ok:
+            self._connect_without_ok = True
+        if self.panel_zones is not None:
+            return
+        ident = P.C.decode_panel_identification(await self._connect_request(P.C.CMD_GET_PANEL_IDENTIFICATION))
+        if ident.zones not in P.C.AREAS_FOR_ZONES:
+            raise CommandFailed(f"couldn't tell the panel's model from {ident.text!r}")
+        self.panel_zones = ident.zones
+        self.log_entry_size = P.C.log_entry_size(ident.zones)
+        self.log_capacity = P.C.LOG_CAPACITY.get(ident.zones)
+        _LOGGER.info("Crestron: the panel is a %s %s (%s)", ident.model, ident.zones, ident.firmware)
+
+    @contextlib.asynccontextmanager
+    async def _udl_session(self, connect_only: bool = False) -> AsyncIterator[None]:
+        """UDL login, the caller's commands, logout. A \\W<udl>/ login opens a
+        Wintex session that silences the text feed; logging out shortens that
+        to ~30 s. Sessions never overlap, and are never held open."""
         if not self.udl:
             raise PanelError("arming needs the UDL code: add it in the integration's options")
         async with self._lock:
@@ -218,27 +304,129 @@ class ConnectionMixin:
                 raise PanelNotConnected("not connected to the panel")
             self._busy = True
             try:
+                short = connect_only and self._connect_without_ok and self._short_wait_ok
+                wait = self.read_login_wait if short else self.login_timeout
+                self._login_ok = False
                 try:
                     # Sent once: a resend would open a second session.
-                    await self._send_text(f"W{self.udl}", LOGIN_TIMEOUT)
+                    await self._send_text(f"W{self.udl}", wait)
+                    self._login_ok = True
                 except CommandFailed as err:
                     if "timed out" not in str(err):
                         raise
                     _LOGGER.debug("Crestron: no OK to the UDL login; continuing (the session usually opens)")
-                if isinstance(command, bytes):
-                    await self._send_frame(command)
-                else:
-                    try:
-                        await self._send_text(command)
-                    except CommandFailed as err:
-                        # Seen when the login got no OK: text commands get
-                        # ERROR while binary frames work.
-                        if not fallback or "rejected" not in str(err):
-                            raise
-                        _LOGGER.debug("Crestron: ERROR to the text command; sending the binary equivalent")
-                        await self._send_frame(fallback)
+                yield
             finally:
                 if self._writer:
                     self._writer.write(P.WINTEX_LOGOUT)
                     self._blackout_until = time.monotonic() + self.blackout
                 self._busy = False
+
+    async def _transaction(
+        self,
+        command: str | bytes,
+        fallback: bytes | None,
+        connect: Callable[[int], tuple[int, bytes]] | None = None,
+    ) -> int | None:
+        """One arm or disarm command in a UDL session. Returns the event log's
+        pointer when the command went through Texecom Connect (read in the
+        same session, so a later read can find what the command caused).
+
+        connect gives the same command as a Texecom Connect (command, body)
+        for the panel's size (its zone count), tried last inside the same
+        session: a Premier Elite 168 (V6.06.03) refuses
+        both the text and the binary UDL arm/disarm commands but carries out
+        Connect ones after a Connect login with the UDL code."""
+        async with self._udl_session():
+            try:
+                if isinstance(command, bytes):
+                    await self._send_frame(command)
+                else:
+                    try:
+                        await self._send_text(command)
+                    except CommandRefused:
+                        # Seen when the login got no OK: text commands get
+                        # ERROR while binary frames work.
+                        if not fallback:
+                            raise
+                        _LOGGER.debug("Crestron: ERROR to the text command; sending the binary equivalent")
+                        await self._send_frame(fallback)
+            except CommandRefused as err:
+                # Only a refusal: after no answer the command may still have
+                # been carried out, and a second one could arm twice.
+                if connect is None:
+                    raise
+                _LOGGER.debug("Crestron: %s; trying the Texecom Connect equivalent in the same session", err)
+                await self._connect_login()
+                assert self.panel_zones is not None
+                await self._send_connect(*connect(self.panel_zones), "the panel refused the command")
+                if self.log_entry_size:
+                    with contextlib.suppress(CommandFailed):
+                        return await self._log_pointer_now()
+        return None
+
+    async def _log_pointer_now(self) -> int | None:
+        reply = await self._connect_request(P.C.CMD_GET_LOG_POINTER)
+        return int.from_bytes(reply, "little") if len(reply) == 2 else None
+
+    async def _read_new_log_entries(self) -> list[tuple[int, dict[str, Any]]]:
+        """The stored log entries written since the last read, oldest first, as
+        (index, decoded entry). The first read only notes where the log ends.
+        Inside a session, after the Connect login."""
+        size, capacity = self.log_entry_size, self.log_capacity
+        if not size or not capacity:
+            return []
+        pointer = await self._log_pointer_now()
+        if pointer is None or not 0 <= pointer < capacity:
+            return []
+        if self._log_pointer is None:
+            self._log_pointer = pointer
+            return []
+        count = (pointer - self._log_pointer) % capacity
+        if count > MAX_LOG_CATCH_UP:
+            _LOGGER.info("Crestron: %d new log entries; reading only the last %d", count, MAX_LOG_CATCH_UP)
+            self._log_pointer = (pointer - MAX_LOG_CATCH_UP) % capacity
+            count = MAX_LOG_CATCH_UP
+        entries: list[tuple[int, dict[str, Any]]] = []
+        index = self._log_pointer
+        while count:
+            # A read never runs past the end of the ring.
+            chunk = min(count, P.C.MAX_LOG_EVENTS_PER_READ, capacity - index)
+            reply = await self._connect_request(P.C.CMD_GET_LOG_EVENTS, P.C.encode_get_log_events(index, chunk))
+            decoded = P.C.decode_log_entries(reply, size)
+            if decoded is None or len(decoded) != chunk:
+                _LOGGER.debug("Crestron: log read at %d refused (%s); trying again next time", index, reply.hex())
+                break
+            entries += [((index + n) % capacity, m) for n, m in enumerate(decoded)]
+            index = (index + chunk) % capacity
+            count -= chunk
+        self._log_pointer = index
+        return entries
+
+    async def _session_reads(
+        self, power: bool, log: bool
+    ) -> tuple[P.C.SystemPower | None, list[tuple[int, dict[str, Any]]]]:
+        """Power readings and new log entries, through Texecom Connect in one
+        UDL session (Crestron itself has neither)."""
+        short_wait = self._connect_without_ok and self._short_wait_ok
+
+        async def session() -> tuple[P.C.SystemPower | None, list[tuple[int, dict[str, Any]]]]:
+            reading, entries = None, []
+            async with self._udl_session(connect_only=True):
+                await self._connect_login()
+                if power:
+                    reading = P.C.decode_system_power(await self._connect_request(P.C.CMD_GET_SYSTEM_POWER))
+                if log:
+                    entries = await self._read_new_log_entries()
+            return reading, entries
+
+        try:
+            return await session()
+        except ConnectUnanswered:
+            if not short_wait:
+                raise
+            # A slow panel may not have opened the session within the short
+            # wait: once more with the full login wait before giving up.
+            _LOGGER.debug("Crestron: no Connect answer after the short login wait; using the full wait from now on")
+            self._short_wait_ok = False
+            return await session()
