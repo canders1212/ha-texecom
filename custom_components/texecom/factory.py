@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from dataclasses import asdict
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.util import dt as dt_util
 
 from .connect.panel import ConnectPanel
 from .const import (
@@ -95,7 +95,8 @@ def create_panel(hass: HomeAssistant, entry: ConfigEntry) -> TexecomPanel:
             info=PanelInfo(**data[CONF_INFO]),
             zones=zones_from_data(data[CONF_ZONES]),
             areas=areas_from_data(data[CONF_AREAS]),
-            time_zone=ZoneInfo(hass.config.time_zone),
+            # Home Assistant's own: making a ZoneInfo can read from disk.
+            time_zone=dt_util.get_default_time_zone(),
             time_sync_hours=TIME_SYNC_HOURS if options.get(CONF_TIME_SYNC) else 0,
             on_event=fire,
             on_layout_changed=layout_changed,

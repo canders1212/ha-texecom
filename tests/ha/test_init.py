@@ -176,6 +176,20 @@ async def test_crestron_has_no_power_sensors_without_the_option_or_the_udl_code(
         await hass.async_block_till_done()
 
 
+async def test_the_panel_clock_uses_home_assistants_time_zone(hass, fake):
+    """The driver gets Home Assistant's own time zone object rather than making
+    one: making one can read the time zone database from disk, which holds up
+    Home Assistant while it does."""
+    import zoneinfo
+
+    from homeassistant.util import dt as dt_util
+
+    zoneinfo.ZoneInfo.clear_cache(only_keys=[hass.config.time_zone])  # as if not read yet
+    entry = await setup_connect(hass, fake)
+    assert entry.runtime_data.time_zone is dt_util.get_default_time_zone()
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_a_failed_setup_leaves_no_connection_open(hass, fake):
     """If setting up fails (here: building the dashboard, which uses Home
     Assistant's internals), no connection to the panel is left running: it
