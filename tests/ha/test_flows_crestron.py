@@ -17,12 +17,15 @@ from .common import UDL, start
 
 @pytest.fixture
 async def crestron_port(socket_enabled):
-    """Answers ASTATUS like a panel's Crestron port ("N: area 1 not armed")."""
-    state = {"answer": True}
+    """Answers ASTATUS like a panel's Crestron port ("N: area 1 not armed"),
+    or hangs up after it, as a bridge with its one client slot taken can."""
+    state = {"answer": True, "hang_up": False}
 
     async def client(reader, writer):
         try:
             while data := await reader.read(256):
+                if b"ASTATUS" in data and state["hang_up"]:
+                    return
                 if b"ASTATUS" in data and state["answer"]:
                     writer.write(b'"N\r\n')
         finally:
@@ -61,6 +64,22 @@ async def test_crestron_no_reply(hass, crestron_port, no_setup, monkeypatch):
         result["flow_id"], {"host": "127.0.0.1", "port": port, "zone_count": 5, "area_count": 1}
     )
     assert result["errors"] == {"base": "no_reply"}
+
+
+async def test_crestron_hang_up_is_no_reply_at_once(hass, crestron_port, no_setup):
+    """Something that hangs up instead of answering is "no reply" straight
+    away. (Waiting on a closed connection used to spin, holding up Home
+    Assistant for the whole 5 s.)"""
+    port, state = crestron_port
+    state["hang_up"] = True
+    result = await start(hass, "crestron", "crestron_network")
+    loop = asyncio.get_running_loop()
+    started = loop.time()
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "127.0.0.1", "port": port, "zone_count": 5, "area_count": 1}
+    )
+    assert result["errors"] == {"base": "no_reply"}
+    assert loop.time() - started < 1
 
 
 @pytest.fixture

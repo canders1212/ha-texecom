@@ -85,7 +85,10 @@ async def validate_crestron_network(host: str, port: int) -> str | None:
         deadline = loop.time() + CRESTRON_REPLY_TIMEOUT
         while b'"' not in data and loop.time() < deadline:
             with contextlib.suppress(TimeoutError):
-                data += await asyncio.wait_for(reader.read(256), max(0.1, deadline - loop.time()))
+                chunk = await asyncio.wait_for(reader.read(256), max(0.1, deadline - loop.time()))
+                if not chunk:  # hung up: reading again returns at once, so it would spin
+                    break
+                data += chunk
         # Any quoted reply means a Crestron port; ASTATUS is answered "Y/"N...
         return None if b'"' in data else "no_reply"
     except OSError:
