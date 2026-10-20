@@ -209,10 +209,10 @@ class FrameParser:
                 return
             frame, self.buffer = self.buffer[:length], self.buffer[length:]
             if crc8(frame[:-1]) != frame[-1]:
-                # A reply can hold a user's code (command 27), so only event
-                # messages are logged in full.
-                shown = frame.hex() if frame[1] == TYPE_MESSAGE else f"of type {frame[1]:#04x}, {length} bytes"
-                self.on_error(f"bad CRC on frame {shown}")
+                # Never its bytes: a reply can hold a user's code (command 27),
+                # and so can a message whose length byte is garbled, as it runs
+                # on into the frame after it.
+                self.on_error(f"bad CRC on a frame of type {frame[1]:#04x}, {length} bytes, sequence {frame[3]}")
                 continue
             self.on_frame(Frame(frame[1], frame[3], frame[4:-1]))
 

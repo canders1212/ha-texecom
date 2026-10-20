@@ -96,17 +96,21 @@ def test_a_user_record_gives_only_the_name():
     assert P.decode_user_name(bytes([P.NAK])) is None  # no such user
 
 
-def test_a_reply_with_a_bad_crc_isnt_logged():
-    """A reply can hold a user's code (GET_USER), so only messages are shown in full."""
+def test_a_frame_with_a_bad_crc_is_never_logged_in_full():
+    """A reply can hold a user's code (GET_USER), and so can a message whose
+    length byte is garbled: it runs on into the frame after it, which may be
+    a GET_USER reply. So a bad frame's bytes are never shown."""
     errors: list[str] = []
     parser = P.FrameParser(lambda _f: None, on_error=errors.append)
-    for frame_type in (P.TYPE_RESPONSE, P.TYPE_MESSAGE):
-        bad = bytearray(P.encode_frame(frame_type, 1, bytes([P.CMD_GET_USER]) + user_record("Sam", "864208")))
-        bad[-1] ^= 0xFF
-        parser.push(bytes(bad))
+    reply = P.encode_frame(P.TYPE_RESPONSE, 2, bytes([P.CMD_GET_USER]) + user_record("Sam", "864208"))
+    bad_reply = bytearray(reply)
+    bad_reply[-1] ^= 0xFF
+    parser.push(bytes(bad_reply))
+    message = bytearray(P.encode_frame(P.TYPE_MESSAGE, 1, bytes([1, 3, 0])))
+    message[2] += len(reply)  # garbled: takes the reply in
+    parser.push(bytes(message) + reply)
     assert len(errors) == 2
-    assert "864208" not in errors[0] and "bytes" in errors[0]
-    assert "864208" in errors[1]  # an event message (which never holds a code) is shown
+    assert all("864208" not in error and "bytes" in error for error in errors)
 
 
 def test_area_flags_decoding():
