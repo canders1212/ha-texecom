@@ -1486,6 +1486,23 @@ async def test_zones_are_read_again_after_the_panel_is_reprogrammed(fake, log_ty
         await panel.stop()
 
 
+async def test_a_wintex_session_reads_the_zones_once(fake, monkeypatch):
+    """Wintex writes settings (Site Data Changed), then ends (Download End):
+    one read of the zones covers both, not one for each."""
+    from custom_components.texecom.connect import events
+
+    monkeypatch.setattr(events, "REDISCOVER_DELAY", 0.05)
+    panel = await make_panel(fake)
+    try:
+        before = sum(cmd == P.CMD_GET_PANEL_IDENTIFICATION for cmd, _args in fake.commands)
+        fake.send_log(100, 9, 1, areas=1)  # Site Data Changed
+        fake.send_log(54, 9, 3, areas=1)  # Download End
+        await asyncio.sleep(0.5)
+        assert sum(cmd == P.CMD_GET_PANEL_IDENTIFICATION for cmd, _args in fake.commands) == before + 1
+    finally:
+        await panel.stop()
+
+
 async def test_a_refused_zone_read_never_drops_a_zone(fake, monkeypatch):
     # A busy panel (Wintex connected) can refuse a read. During a re-read that must
     # not look like a zone taken out of use: give up, and try again after reconnecting.

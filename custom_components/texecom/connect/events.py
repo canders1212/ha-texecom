@@ -176,6 +176,9 @@ class EventsMixin:
         elif m["type"] in (LOG_INSTALLER_PROGRAMMING_END, LOG_DOWNLOAD_END):
             how = "engineer programming" if m["type"] == LOG_INSTALLER_PROGRAMMING_END else "a Wintex session"
             self._log.info("Connect: %s finished; re-reading zones and areas", how)
+            if self._rediscover_handle:  # this read covers the settings it wrote too
+                self._rediscover_handle.cancel()
+                self._rediscover_handle = None
             self._spawn(self._rediscover())
         elif m["type"] == LOG_SITE_DATA_CHANGED:
             self._rediscover_soon()
