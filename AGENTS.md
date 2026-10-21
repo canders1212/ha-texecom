@@ -10,7 +10,7 @@ This repository is maintained through AI agents: **the owner doesn't write code.
 
 1. **Never arm or disarm a real panel** unless the owner is present and has agreed to that test. Read-only checks are fine any time. Leave disarming to the owner.
 2. **Never write a code into anything**: no UDL code, keypad code or alarm code in the repository, tests, issues, logs you post, or commits. Tests use the dummy codes already in them.
-3. **Everything here is public.** No real names, email addresses, home details, Wintex files, or screenshots with personal data. Commit as `metaljay <metaljay@users.noreply.github.com>`, and check the diff for personal details before every push.
+3. **Everything here is public.** No real names, email addresses, home details, Wintex files, or screenshots with personal data. Commit as `metaljay <metaljay@users.noreply.github.com>`, merge pull requests with `gh pr merge <number> --author-email metaljay@users.noreply.github.com`, and check the diff for personal details before every push.
 4. **Don't change the contracts without a plan** (and say so in the pull request): the `TexecomPanel` interface, the `texecom_event` types and fields, entity unique IDs and entity IDs, the stored config entry data, and the blueprints' input names and paths. Details: [Architecture → The contracts](docs/development/architecture.md#the-contracts).
 5. **Layers 1 and 2 never import Home Assistant** (`connect/`, `crestron/`, `panel.py`).
 6. **One kind of change per commit.** Moving code (a refactor) never goes in the same commit as a change in behaviour.
