@@ -8,7 +8,7 @@ blueprint:
   author: metaljay
   source_url: https://github.com/metaljay/ha-texecom/blob/main/blueprints/automation/texecom/arm_when_everyone_leaves.yaml
   homeassistant:
-    min_version: 2025.3.0
+    min_version: 2025.7.0
   input:
     alarm:
       name: Alarm

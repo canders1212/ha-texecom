@@ -25,7 +25,7 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 
 - A Texecom **Premier Elite** panel with a **SmartCom** (the box the Texecom app uses) or a **ComIP**.
 - The panel's **UDL code** (its remote-access code). Texecom's default is **1234**, and most panels keep it.
-- **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz) (from 2026.11 it's built in, as the *Marketplace*).
+- **Home Assistant** 2025.7 or newer, with [HACS](https://hacs.xyz) (from 2026.11 it's built in, as the *Marketplace*).
 
 > ℹ️ The SmartCom talks to one thing at a time: while Home Assistant is connected, the Texecom app can't. Your alarm (and the app's alarm notifications) carry on as normal. Turn off Homebridge or texecom2mqtt first if you use them.
 
