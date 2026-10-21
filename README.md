@@ -23,7 +23,7 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 <details open>
 <summary><h2 id="what-you-get">✨ What you get</h2></summary>
 
-<img src="https://raw.githubusercontent.com/metaljay/ha-texecom/main/docs/images/dashboard.png?v=2" width="760" alt="The Alarm dashboard: the alarm with its Away, Night and Off buttons, Ready to arm, recent activity, panel health, and every zone grouped by type">
+<img src="https://raw.githubusercontent.com/metaljay/ha-texecom/main/docs/images/dashboard.png?v=3" width="760" alt="The Alarm dashboard: the alarm with its Away, Night and Off buttons, Ready to arm, recent activity, panel health, and every zone grouped by type">
 
 - 🛡️ **An alarm** you can set to **Away**, **Night** or **Home**, or turn off, and see when it's arming, waiting for you to come in, or going off, and whether it's **ready to arm**. Changes at the keypad show straight away.
 - 🚪 **A sensor for every zone**, named as on your panel: doors, windows, motion, smoke and gas.
