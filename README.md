@@ -44,7 +44,7 @@ These panels have run it. Each row links to what was reported.
 | Elite 64 | not given | ComIP (Texecom Connect) | A part arm shown as Vacation, set from Home Assistant and at the keypad, with automations firing on it ([#32](https://github.com/metaljay/ha-texecom/issues/32)) |
 | Elite 168 | V6.06.03 | Crestron, through a USR-TCP232 adapter | Part arm and disarm (the panel refuses Crestron's own arm commands, so Texecom Connect's are used inside the session), power readings, the stored event log, a failed arm ([PR #46](https://github.com/metaljay/ha-texecom/pull/46)) |
 
-**Testers wanted** for the Elite 48, 88 and 640, for Texecom Connect on an Elite 168, and for Crestron on any panel except the Elite 24 and 168. More reports on the models above help too. **[Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if you only got as far as setup. Attach the **Download diagnostics** file from the panel's device page: codes and addresses are removed automatically.
+**Testers wanted** for the Elite 48, 88 and 640, for Texecom Connect on an Elite 168, for Crestron on any panel except the Elite 24 and 168, and for wireless (Ricochet) detectors, which the maintainer's panel doesn't have. More reports on the models above help too. **[Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if you only got as far as setup. Attach the **Download diagnostics** file from the panel's device page: codes and addresses are removed automatically.
 
 ## 🚀 Set it up in four steps
 
