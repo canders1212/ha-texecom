@@ -2,7 +2,7 @@
 
 # Texecom Premier Elite for Home Assistant
 
-Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home), through the **SmartCom** you already have. Install it from HACS (or the Marketplace, from Home Assistant 2026.11), type your SmartCom's address, and Home Assistant reads your zones from the panel. No add-on, no MQTT, no files to edit.
+Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home), through the **SmartCom** you already have. Install it from HACS (or the Marketplace, from Home Assistant 2026.11), type your SmartCom's address, and Home Assistant reads your zones from the panel. No add-on, no MQTT, no files to edit. [Take the quick tour →](https://metaljay.github.io/ha-texecom/)
 
 [![Open your Home Assistant and add this repository to HACS or the Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
 
