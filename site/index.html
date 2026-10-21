@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ha-texecom: your Texecom alarm in Home Assistant</title>
+  <meta name="description" content="A free, open-source Home Assistant integration for Texecom Premier Elite alarms. Arm, disarm and see every zone, through the SmartCom you already have. Set up in minutes, no YAML.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="images/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="images/icon.png">
+  <link rel="canonical" href="https://metaljay.github.io/ha-texecom/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://metaljay.github.io/ha-texecom/">
+  <meta property="og:title" content="ha-texecom: your Texecom alarm in Home Assistant">
+  <meta property="og:description" content="Arm, disarm and see every zone of your Texecom Premier Elite alarm in Home Assistant. Free and open source.">
+  <meta property="og:image" content="https://metaljay.github.io/ha-texecom/images/dashboard.png">
+  <meta property="og:image:alt" content="The Alarm dashboard in Home Assistant">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav">
+    <nav class="nav-inner" aria-label="Main">
+      <a class="brand" href="#top">
+        <img src="images/icon.svg" width="28" height="28" alt="">
+        <span>ha-texecom</span>
+      </a>
+      <ul class="nav-links">
+        <li class="wide"><a href="#features">Features</a></li>
+        <li class="wide"><a href="#setup">Set up</a></li>
+        <li class="wide"><a href="https://github.com/metaljay/ha-texecom/blob/main/docs/README.md">Docs</a></li>
+        <li><a href="https://github.com/metaljay/ha-texecom">GitHub</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="wrap">
+        <p class="eyebrow">For Texecom Premier Elite alarms</p>
+        <h1>Your Texecom alarm, <span class="nowrap">at home</span> in Home&nbsp;Assistant.</h1>
+        <p class="lede">Arm, disarm and see every zone, through the SmartCom you already&nbsp;have.</p>
+        <div class="actions">
+          <a class="button" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&amp;repository=ha-texecom&amp;category=integration">Add to Home Assistant</a>
+          <a class="more" href="https://github.com/metaljay/ha-texecom">View on GitHub</a>
+          <a class="more" href="https://github.com/metaljay/ha-texecom/blob/main/docs/README.md">Read the docs</a>
+        </div>
+        <p class="note">Free and open source. Unofficial: not made by Texecom.</p>
+      </div>
+      <div class="wrap wide">
+        <img class="shot hero-shot" src="images/dashboard.png" width="1800" height="1097" fetchpriority="high"
+             alt="The Alarm dashboard in Home Assistant: the alarm with its Away, Night and Off buttons, Ready to arm, the day's activity, panel health, and every motion zone showing Clear">
+      </div>
+    </section>
+
+    <section class="section alt" id="features" aria-labelledby="features-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="features-title">What you get.</h2>
+          <p>The alarm you use every day, in the same Home Assistant you use for the rest of your home.</p>
+        </header>
+        <ul class="tiles">
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <h3>Arm and disarm</h3>
+            <p>Away, Night and Home (your panel's part arms), or off. See when it's arming, waiting for you to come in, or going off.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21"/><path d="M3.5 21h17"/><path d="M14.5 12h.01"/></svg>
+            <h3>A sensor for every zone</h3>
+            <p>Named as on your panel: doors, windows, motion, smoke and gas. Changes at the keypad show straight away.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2.5"/><path d="M22 10.5v3"/><path d="M11.5 9.5 9.5 12h3l-2 2.5"/></svg>
+            <h3>Panel health</h3>
+            <p>The connection, mains power, battery and tampers, and what the keypad says.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+            <h3>Who did it</h3>
+            <p><em>Changed by Sam</em>, not <em>User 3</em>, with the names stored in your panel filled in for you.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="6" rx="2"/><rect x="13" y="11" width="8" height="10" rx="2"/><rect x="3" y="15" width="8" height="6" rx="2"/></svg>
+            <h3>A ready-made dashboard</h3>
+            <p>An Alarm dashboard, built for you at the end of setup from Home Assistant's own cards.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+            <h3>Notifications</h3>
+            <p>When the alarm couldn't arm, the panel is on battery, or a tamper opens, saying what to check.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/></svg>
+            <h3>One-click automations</h3>
+            <p>Arm when everyone leaves (or ask you first), and tell your phone when the alarm goes off.</p>
+            <a class="more" href="https://github.com/metaljay/ha-texecom/blob/main/docs/user/automations.md">Add them</a>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 1.5"/><path d="M9.5 2.5h5"/></svg>
+            <h3>Ready in minutes</h3>
+            <p>Type your SmartCom's address and the panel's UDL code, and Home Assistant reads your zones. No YAML, no add-on, no MQTT.</p>
+          </li>
+          <li class="tile reveal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg>
+            <h3>Apple Home too</h3>
+            <p>Through Home Assistant's built-in HomeKit Bridge: the Home app, Siri and critical alerts.</p>
+            <a class="more" href="https://github.com/metaljay/ha-texecom/blob/main/docs/user/apple-home.md">How to</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="built-in-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="built-in-title">Feels built in.</h2>
+          <p>The alarm, doors, motion and smoke detectors turn up wherever Home Assistant expects them: the Security summary, each room, the Logbook and History. Zones named after a room you already have go straight into it.</p>
+        </header>
+        <img class="shot reveal" src="images/security.png" width="1280" height="540" loading="lazy" decoding="async"
+             alt="Home Assistant's own Security page listing the house alarm, the panel's tamper, the front and patio doors and a smoke detector, with their recent activity">
+      </div>
+    </section>
+
+    <section class="section alt" aria-labelledby="words-title">
+      <div class="wrap split">
+        <div class="split-text reveal">
+          <h2 id="words-title">Plain words, not codes.</h2>
+          <p>When the alarm couldn't arm, the panel loses its mains power, or a tamper opens, Home Assistant says what happened and what to check.</p>
+          <p>The activity list reads the same way: <em>didn't arm: Front Door was active</em>, <em>set off by Kitchen</em>, <em>keypad used by Sam</em>.</p>
+        </div>
+        <img class="shot narrow reveal" src="images/notifications.png" width="720" height="1195" loading="lazy" decoding="async"
+             alt="Three Home Assistant notifications: Alarm not set, because Kitchen was active when the exit time ended; Alarm panel on battery; and Alarm tamper, because the panel's lid is open">
+      </div>
+    </section>
+
+    <section class="section" id="connect" aria-labelledby="connect-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="connect-title">Works with the module you already have.</h2>
+          <p>Two ways in. Most people use the first.</p>
+        </header>
+        <ul class="ways">
+          <li class="way reveal">
+            <p class="tag">Texecom Connect</p>
+            <h3>Through your panel's communicator</h3>
+            <p>Over your home network, to the module already on your panel. Everything on this page works this way.</p>
+            <ul class="chips" aria-label="Modules">
+              <li>SmartCom</li>
+              <li>ComIP</li>
+              <li>ComWiFi</li>
+            </ul>
+          </li>
+          <li class="way reveal">
+            <p class="tag">Crestron</p>
+            <h3>Through a spare COM port</h3>
+            <p>A COM port set to Crestron System, through a serial-to-network adapter or a USB-serial cable. Zones and arming with fewer extras, and the Texecom app keeps its SmartCom.</p>
+            <a class="more" href="https://github.com/metaljay/ha-texecom/blob/main/docs/user/crestron.md">What differs</a>
+          </li>
+        </ul>
+        <p class="aside reveal">The SmartCom talks to one thing at a time: while Home Assistant is connected, the Texecom app can't. Your alarm, and the app's alarm notifications, carry on as normal.</p>
+      </div>
+    </section>
+
+    <section class="section alt" id="tested" aria-labelledby="tested-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="tested-title">Tested on Elite 12, 24, 64 and 168. So&nbsp;far.</h2>
+          <p>Each panel on the list links to what was tried on it. Tried it on yours? Every report helps, even if it all just worked.</p>
+          <div class="actions">
+            <a class="more" href="https://github.com/metaljay/ha-texecom#tested-panels">See the tested panels</a>
+            <a class="more" href="https://github.com/metaljay/ha-texecom/discussions/47">Tell us how it went</a>
+          </div>
+        </header>
+      </div>
+    </section>
+
+    <section class="section" id="setup" aria-labelledby="setup-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="setup-title">Up and running in three steps.</h2>
+        </header>
+        <div class="split steps-split">
+          <ol class="steps">
+            <li class="reveal">
+              <h3>Add it to Home Assistant</h3>
+              <p>Click <strong>Add to Home Assistant</strong>, then <strong>Download</strong> and restart (HACS), or <strong>Install</strong> (the Marketplace, from Home Assistant 2026.11).</p>
+            </li>
+            <li class="reveal">
+              <h3>Point it at your panel</h3>
+              <p>Add the Texecom integration, choose <strong>Texecom Connect</strong>, and type your SmartCom's address (from your router's list of devices) and the panel's UDL code.</p>
+            </li>
+            <li class="reveal">
+              <h3>Choose your arm modes</h3>
+              <p>Pick the part arms <strong>Night</strong> and <strong>Home</strong> use, keep the Alarm dashboard ticked, and you're done.</p>
+            </li>
+          </ol>
+          <img class="shot narrow reveal" src="images/arm-modes.png" width="960" height="1039" loading="lazy" decoding="async"
+               alt="The setup screen Found your panel: the areas and zones read from the panel, a choice of part arm for Night and Home, and Add an Alarm dashboard to the sidebar switched on">
+        </div>
+        <div class="actions center reveal">
+          <a class="button" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&amp;repository=ha-texecom&amp;category=integration">Add to Home Assistant</a>
+          <a class="more" href="https://github.com/metaljay/ha-texecom/blob/main/docs/user/setup.md">Step-by-step guide</a>
+        </div>
+        <p class="aside reveal">You'll need a Premier Elite panel with a SmartCom, ComIP or ComWiFi (or a COM port set to Crestron), the panel's UDL code (its remote-access code), and Home Assistant 2025.7 or newer. With a SmartCom, ComIP or ComWiFi, nothing needs changing on the panel or in the Texecom app.</p>
+      </div>
+    </section>
+
+    <section class="section alt" id="safety" aria-labelledby="safety-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <h2 id="safety-title">It does what you ask. Nothing&nbsp;more.</h2>
+        </header>
+        <ul class="points">
+          <li class="reveal">
+            <h3>Arms only when asked</h3>
+            <p>It arms or disarms your alarm only when you, or an automation you set up, ask it to.</p>
+          </li>
+          <li class="reveal">
+            <h3>Leaves your programming alone</h3>
+            <p>It never changes the panel's programming. It can keep the panel's clock right, and you can switch that off.</p>
+          </li>
+          <li class="reveal">
+            <h3>Keeps your codes private</h3>
+            <p>Keypad codes are never used or stored. The UDL code is kept like any integration's password, and diagnostics leave it out.</p>
+          </li>
+        </ul>
+        <p class="aside reveal">It isn't a certified security product or a replacement for your alarm's own keypads, monitoring or app.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-top">
+        <a class="brand" href="#top">
+          <img src="images/icon.svg" width="28" height="28" alt="">
+          <span>ha-texecom</span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="https://github.com/metaljay/ha-texecom">GitHub</a></li>
+          <li><a href="https://github.com/metaljay/ha-texecom/blob/main/docs/README.md">Docs</a></li>
+          <li><a href="https://github.com/metaljay/ha-texecom/issues">Issues</a></li>
+          <li><a href="https://github.com/metaljay/ha-texecom/discussions">Discussions</a></li>
+          <li><a href="https://github.com/metaljay/ha-texecom/blob/main/NOTICE">Credits</a></li>
+          <li><a href="https://github.com/metaljay/ha-texecom/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+      <p>An independent, unofficial project: not made, endorsed or supported by Texecom. Texecom, Premier Elite, SmartCom, ComIP and ComWiFi are trademarks of Texecom Ltd, and Apple Home and HomeKit of Apple Inc., used here only to say what this works with. Free and open source under the MIT licence, with no warranty. This site has no cookies and no tracking.</p>
+    </div>
+  </footer>
+</body>
+</html>
