@@ -6,7 +6,7 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 
 [![Open your Home Assistant and add this repository to HACS or the Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=metaljay&repository=ha-texecom&category=integration)
 
-> **Unofficial.** Not made or supported by Texecom. Tested on a Premier Elite 24 (firmware V6.05.03) with a SmartCom. **Tried it on another panel? [Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if it all worked.
+> **Unofficial.** Not made or supported by Texecom. Tested on Premier Elite 12, 24, 64 and 168 panels ([which ones](https://github.com/metaljay/ha-texecom#-tested-panels)). **Tried it on another panel? [Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if it all worked.
 
 <img src="https://raw.githubusercontent.com/metaljay/ha-texecom/main/docs/images/dashboard.png?v=2" width="760" alt="The Alarm dashboard: the alarm with its Away, Night and Off buttons, Ready to arm, recent activity, panel health, and every zone grouped by type">
 
@@ -28,6 +28,23 @@ Use your Texecom **Premier Elite** alarm from **Home Assistant** (and Apple Home
 - **Home Assistant** 2025.3 or newer, with [HACS](https://hacs.xyz) (from 2026.11 it's built in, as the *Marketplace*).
 
 > ℹ️ The SmartCom talks to one thing at a time: while Home Assistant is connected, the Texecom app can't. Your alarm (and the app's alarm notifications) carry on as normal. Turn off Homebridge or texecom2mqtt first if you use them.
+
+## ✅ Tested panels
+
+These panels have run it. Each row links to what was reported.
+
+| Panel | Firmware | Connection | What was tried |
+|---|---|---|---|
+| Elite 12 | V6.03.02 | ComIP | Two areas: setup found the zones and both areas, zones show activity, one area armed on its own, each area shows its own *Ready to arm*, a smoke detector ([#4](https://github.com/metaljay/ha-texecom/issues/4)) |
+| Elite 24 | V5.02.01 | ComIP (Texecom Connect) | Two areas: setup found the zones and both areas, and arming Night and Away at the keypad showed in Home Assistant ([discussion #38](https://github.com/metaljay/ha-texecom/discussions/38)) |
+| Elite 24 | V6.05.03 | SmartCom; Crestron through an ESP Easy serial server | The maintainer's own panel. Over the SmartCom, all of it: arming, part arms, alarms, tampers, mains failure, keypad changes. Over Crestron, zones, arming and disarming |
+| Elite 24 | V6.06.03 | SmartCom (managed by Texecom Cloud) | Setup, zones, arming Away and the part arms from Home Assistant, the Alarm dashboard ([#30](https://github.com/metaljay/ha-texecom/issues/30)) |
+| Elite 24 | V6.06.03 | ComWiFi | Setup found the zones and the area, and the panel's power readings came through ([discussion #1](https://github.com/metaljay/ha-texecom/discussions/1)) |
+| Elite 64 | V5.00.03 | Texecom Connect, through a home-made ESP32 serial bridge | Three areas: setup, zones, arming Away and a part arm, disarming, arms at the keypad, an alarm going off naming the zone, keypad user names ([#36](https://github.com/metaljay/ha-texecom/issues/36)) |
+| Elite 64 | not given | ComIP (Texecom Connect) | A part arm shown as Vacation, set from Home Assistant and at the keypad, with automations firing on it ([#32](https://github.com/metaljay/ha-texecom/issues/32)) |
+| Elite 168 | V6.06.03 | Crestron, through a USR-TCP232 adapter | Part arm and disarm (the panel refuses Crestron's own arm commands, so Texecom Connect's are used inside the session), power readings, the stored event log, a failed arm ([PR #46](https://github.com/metaljay/ha-texecom/pull/46)) |
+
+**Testers wanted** for the Elite 48, 88 and 640, for Texecom Connect on an Elite 168, and for Crestron on any panel except the Elite 24 and 168. More reports on the models above help too. **[Tell us how it went](https://github.com/metaljay/ha-texecom/issues/new?template=1-tested.yml)**, even if you only got as far as setup. Attach the **Download diagnostics** file from the panel's device page: codes and addresses are removed automatically.
 
 ## 🚀 Set it up in four steps
 
