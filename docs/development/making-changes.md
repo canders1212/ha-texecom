@@ -11,7 +11,7 @@ How to change something safely: find the compartment, prove the problem with a t
 3. **Write a test first** in that compartment's test file that shows the problem or the new behaviour. Run it and see it fail.
 4. **Change the code**, in that compartment only. If you find yourself editing a second compartment, check whether you're crossing a [contract](architecture.md#the-contracts).
 5. **Run that test file**, then **everything** ([Testing](testing.md)): ruff, both test suites.
-6. **Update the docs** users will read (`docs/user/`), and [protocol.md](protocol.md) if you learned something about the panel.
+6. **Update the docs** users will read (`docs/user/`, and the README and the website in `site/` where they mention it), and [protocol.md](protocol.md) if you learned something about the panel.
 7. **Commit** with a message that says what changed for users and why ([below](#commits-and-pull-requests)).
 
 Keep each change small: one bug or one feature per commit. A refactor (moving code) never goes in the same commit as a behaviour change.
@@ -50,6 +50,7 @@ All code paths are under `custom_components/texecom/`; test paths are under `tes
 | Diagnostics | `diagnostics.py` | `ha/test_diagnostics.py` |
 | Any words on screen | `strings.json`, then copy it to `translations/en.json` | (hassfest checks the format) |
 | Entity icons | `icons.json` | (hassfest checks the format) |
+| The website (https://metaljay.github.io/ha-texecom/) | `site/index.html`, `site/style.css`, images in `site/images/`; published when `site/` changes on `main` | Open `site/index.html` in a browser, at phone width too |
 | The ready-made automations | `blueprints/automation/texecom/` (outside `custom_components/`) | `ha/test_blueprints.py` |
 | What users read | `docs/user/`, `README.md` | (none) |
 

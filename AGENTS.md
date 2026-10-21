@@ -28,6 +28,7 @@ Three layers; each module has one job and its own test file. Code is under `cust
 | **2. Panel drivers** | `panel.py` (the shared model and the `TexecomPanel` contract); Connect: `connect/client.py` (the session), `connect/panel.py` (connection, state, arm/disarm), `connect/discovery.py`, `connect/events.py`, `connect/conditions.py`, `connect/clock.py`; Crestron: `crestron/connection.py`, `crestron/panel.py` |
 | **3. Home Assistant** | `__init__.py` (setup/unload), `factory.py` (builds the driver), `entity.py`, `alarm_control_panel.py`, `binary_sensor.py`, `sensor.py`, `notifications.py`, `issues.py`, `repairs.py`, `dashboard.py`, `diagnostics.py`, `logbook.py` (the activity list), `users.py` (names for keypad users), `config_flow.py` and `flows/` (setup screens and the options menu), `strings.json` (all screen text; `translations/en.json` is an identical copy), `icons.json` |
 | **Outside the integration** | `blueprints/automation/texecom/`: ready-made automations users import with one click (YAML, tested in `tests/ha/test_blueprints.py`) |
+| **The website** | `site/`: one static page at https://metaljay.github.io/ha-texecom/, published by `.github/workflows/pages.yml` whenever `site/` changes on `main`. It repeats a few facts from the README (the minimum Home Assistant, the panels tested, the ways to connect): change them in both |
 
 The full map, the contracts and how things flow: [docs/development/architecture.md](docs/development/architecture.md). Which file and test to change for each kind of task: [docs/development/making-changes.md](docs/development/making-changes.md#where-does-my-change-go).
 
@@ -38,7 +39,7 @@ The full map, the contracts and how things flow: [docs/development/architecture.
 3. Write a test that shows the problem or the new behaviour, and see it fail.
 4. Change only that compartment.
 5. Run that test file, then all the checks below.
-6. Update `docs/user/` if users will notice, and `protocol.md` if you learned something about the panel.
+6. Update `docs/user/` if users will notice (and the README and `site/` where they mention it), and `protocol.md` if you learned something about the panel.
 7. Commit with a message that says what changed for users and why.
 
 ## Checks

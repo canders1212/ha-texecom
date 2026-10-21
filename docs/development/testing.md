@@ -35,7 +35,7 @@ CI runs the Home Assistant tests on three versions of Home Assistant:
 | Which | When | Where it's set |
 |---|---|---|
 | **Pinned** (the release we test on) | Every push | `validate.yml`, `AGENTS.md` and this page: move all three to a newer release now and then |
-| **Oldest supported** | Every push | `validate.yml`; the same version is the minimum in `hacs.json`, the blueprints' `min_version` and the README: raise them together |
+| **Oldest supported** | Every push | `validate.yml`; the same version is the minimum in `hacs.json`, the blueprints' `min_version`, the README and the website (`site/index.html`): raise them together |
 | **Newest**, betas included | Every Monday, or by hand (*Actions → Validate → Run workflow*) | Not pinned: whatever is newest that week |
 
 If a Monday run fails, CI opens an issue, *Weekly check failed* (or comments on the one already open). Fix it on `main`, then release a patch so users who update Home Assistant aren't left with a broken alarm.
