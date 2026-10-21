@@ -34,6 +34,9 @@ async def use(hass, name: str, **inputs) -> None:
 
 
 async def later(hass, **delta) -> None:
+    # Let Home Assistant act on the last state change before moving the clock:
+    # older releases start a trigger's countdown a moment after the change.
+    await hass.async_block_till_done()
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(**delta))
     await hass.async_block_till_done()
 
