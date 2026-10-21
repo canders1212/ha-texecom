@@ -50,11 +50,11 @@ ruff check . && ruff format --check .
 pytest tests --ignore=tests/ha
 
 # Python 3.14, separate environment: the Home Assistant tests
-pip install "pytest-homeassistant-custom-component==0.13.367" "pyserial-asyncio-fast>=0.11"
+pip install "pytest-homeassistant-custom-component==0.13.373" "pyserial-asyncio-fast>=0.11"
 pytest tests/ha
 ```
 
-Run the two test suites separately (Home Assistant's test plugin blocks the sockets the driver tests use). `ruff format` also checks Python code blocks inside Markdown files, so run it after editing docs too. CI (`.github/workflows/validate.yml`) runs these plus HACS and hassfest validation on every push. More: [docs/development/testing.md](docs/development/testing.md).
+Run the two test suites separately (Home Assistant's test plugin blocks the sockets the driver tests use). `ruff format` also checks Python code blocks inside Markdown files, so run it after editing docs too. CI (`.github/workflows/validate.yml`) runs these plus HACS and hassfest validation on every push, and the Home Assistant tests on the oldest Home Assistant we support too. Every Monday it also tests the newest Home Assistant (betas included) and, if anything fails, opens a *Weekly check failed* issue. More: [docs/development/testing.md](docs/development/testing.md).
 
 ## Done means
 

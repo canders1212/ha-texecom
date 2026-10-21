@@ -54,6 +54,75 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      # Pinned to the Home Assistant release it was tested on (2026.9.4).
-      - run: pip install "pytest-homeassistant-custom-component==0.13.367" "pyserial-asyncio-fast>=0.11"
+      # Pinned to the Home Assistant release it was tested on (2026.10.2).
+      - run: pip install "pytest-homeassistant-custom-component==0.13.373" "pyserial-asyncio-fast>=0.11"
       - run: pytest -q tests/ha
+
+  ha-tests-oldest:
+    name: Home Assistant tests (oldest supported)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Home Assistant 2025.7.0: the minimum in hacs.json, the blueprints' min_version and the README. Raise them together.
+      # pycares<5: these releases don't pin it, and pycares 5 breaks their aiodns.
+      - run: pip install "pytest-homeassistant-custom-component==0.13.260" "pyserial-asyncio-fast>=0.11" "pycares<5"
+      - run: pytest -q tests/ha
+
+  ha-tests-newest:
+    name: Home Assistant tests (newest release)
+    # Weekly, and when run by hand: the newest Home Assistant, betas included, to hear about breaking changes early.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install the newest Home Assistant
+        run: |
+          pip install --upgrade pytest-homeassistant-custom-component "pyserial-asyncio-fast>=0.11"
+          newest=$(curl -fsS https://pypi.org/pypi/pytest-homeassistant-custom-component/json | jq -r .info.version)
+          installed=$(pip show pytest-homeassistant-custom-component | sed -n 's/^Version: //p')
+          if [ "$installed" != "$newest" ]; then
+            echo "::error::pytest-homeassistant-custom-component $newest didn't install on this Python (got $installed): raise python-version above."
+            exit 1
+          fi
+          pip show homeassistant | sed -n 's/^Version: /Tested on Home Assistant /p' >> "$GITHUB_STEP_SUMMARY"
+      - run: pytest -q tests/ha
+
+  report:
+    name: Open an issue if the weekly check fails
+    needs: [hacs, hassfest, lint, driver-tests, ha-tests, ha-tests-oldest, ha-tests-newest]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Weekly check failed"
+          failed=$(echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result == "failure") | "- `\(.key)`"')
+          body=$(cat <<EOF
+          The weekly check failed: $RUN_URL
+
+          Jobs that failed:
+          $failed
+
+          \`ha-tests-newest\` failing usually means a new Home Assistant release (or beta) changed something the integration relies on, so users who update Home Assistant may be affected. \`hacs\` or \`hassfest\` failing means a validator got stricter. Start with AGENTS.md: reproduce the failing job locally, fix it on \`main\`, and release a patch.
+
+          Opened by \`.github/workflows/validate.yml\`. Later failures are added here as comments until this issue is closed.
+          EOF
+          )
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

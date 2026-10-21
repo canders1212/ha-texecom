@@ -16,9 +16,9 @@ python3.13 -m venv .venv-driver
 .venv-driver/bin/ruff check .
 .venv-driver/bin/ruff format --check .
 
-# Home Assistant tests: Python 3.14, inside Home Assistant 2026.9.4
+# Home Assistant tests: Python 3.14, inside Home Assistant 2026.10.2
 python3.14 -m venv .venv-ha
-.venv-ha/bin/pip install "pytest-homeassistant-custom-component==0.13.367" "pyserial-asyncio-fast>=0.11"
+.venv-ha/bin/pip install "pytest-homeassistant-custom-component==0.13.373" "pyserial-asyncio-fast>=0.11"
 .venv-ha/bin/pytest tests/ha
 ```
 
@@ -30,12 +30,22 @@ Run one compartment's tests while you work, e.g. `pytest tests/ha/test_flows_opt
 
 > Don't run `pytest tests` (both suites at once) inside the Home Assistant environment: Home Assistant's test plugin blocks network sockets, which the driver tests need. Run the two suites separately, as above and as CI does.
 
+CI runs the Home Assistant tests on three versions of Home Assistant:
+
+| Which | When | Where it's set |
+|---|---|---|
+| **Pinned** (the release we test on) | Every push | `validate.yml`, `AGENTS.md` and this page: move all three to a newer release now and then |
+| **Oldest supported** | Every push | `validate.yml`; the same version is the minimum in `hacs.json`, the blueprints' `min_version` and the README: raise them together |
+| **Newest**, betas included | Every Monday, or by hand (*Actions → Validate → Run workflow*) | Not pinned: whatever is newest that week |
+
+If a Monday run fails, CI opens an issue, *Weekly check failed* (or comments on the one already open). Fix it on `main`, then release a patch so users who update Home Assistant aren't left with a broken alarm.
+
 ## The test suites
 
 | Suite | Where | What it covers |
 |---|---|---|
-| **Driver tests** (72) | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
-| **Home Assistant tests** (89) | `tests/ha/` | Layer 3: the integration running inside a real Home Assistant (setup screens, options, entities, services, events, notifications, the activity list, Repairs, diagnostics, the dashboard, the blueprints), against the same simulated panels |
+| **Driver tests** | `tests/test_connect.py`, `tests/test_crestron.py` | Layers 1 and 2: decoding, and each driver against a simulated panel over real sockets. Fast, and need no Home Assistant |
+| **Home Assistant tests** | `tests/ha/` | Layer 3: the integration running inside a real Home Assistant (setup screens, options, entities, services, events, notifications, the activity list, Repairs, diagnostics, the dashboard, the blueprints), against the same simulated panels |
 
 The Home Assistant tests have one file per module (see [Architecture](architecture.md#tests)). `tests/ha/common.py` holds shared helpers:
 
@@ -130,7 +140,7 @@ Gaps longer than 5 seconds are cut to 5. In a test, use `FakeConnectPanel.from_d
 CI runs Home Assistant's `hassfest` validator (manifest, `strings.json`, config flow). To run it yourself you need Home Assistant's source at the matching release:
 
 ```bash
-git clone --depth 1 --branch 2026.9.4 https://github.com/home-assistant/core ha-core
+git clone --depth 1 --branch 2026.10.2 https://github.com/home-assistant/core ha-core
 python3.14 -m venv .venv-hassfest
 .venv-hassfest/bin/pip install -r ha-core/requirements.txt
 cd ha-core && ../.venv-hassfest/bin/python -m script.hassfest --action validate --integration-path ../custom_components/texecom
