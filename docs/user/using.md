@@ -122,7 +122,7 @@ The Home app can't ask for a code, and HomeKit Bridge only passes one on if it's
 - 🔌 **Mains power** turns off as soon as the panel reports a mains failure, and **Problem** lists any fault the panel reports (e.g. *AC Fail*, *Low Battery*). The panel doesn't report the mains coming back, so Home Assistant checks the power readings every 30 seconds instead.
 - 🔧 **Tamper** turns on while the panel's lid, a keypad, the bell box or a detector is open, and says which. Most installs wire every detector's tamper switch to one shared circuit, so it can't say *which* detector: that shows as *Auxiliary Tamper*. A detector that reports its own tamper (a wireless one, say) shows on its zone's **Tamper** instead. The panel doesn't always report a tamper: if it sets off its internal sounders while the alarm is off and doesn't say why, Tamper shows *Internal Alarm* until a code is entered at the keypad.
 - 🕐 **The panel clock** resets if the panel loses all power (mains and battery). Home Assistant puts it right (or, with **Keep the panel clock right** off, offers to: see [Troubleshooting](troubleshooting.md#the-panel-clock-is-wrong)).
-- 📟 **Keypad display** shows what the keypads say (e.g. *System Alerts!*), without the clock.
+- 📟 **Keypad display** shows what the keypads say (e.g. *System Alerts!*), without the clock. When the keypads show only the time and date, it says *Time and date*.
 
 ## More than one area
 

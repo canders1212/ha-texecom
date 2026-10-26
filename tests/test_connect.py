@@ -174,6 +174,14 @@ def test_display_message_drops_the_clock():
     assert P.display_message("Exit Time 10") == "Exit Time 10"
 
 
+def test_display_message_with_only_the_clock_stays_the_same():
+    # Keypads with no banner show just the time (#51): one fixed text, so the
+    # sensor doesn't change, and fill the activity list, every half a minute.
+    assert P.display_message("11:54.50 Mon 26") == P.DISPLAY_CLOCK_ONLY
+    assert P.display_message("11:55.22 Mon 26") == P.DISPLAY_CLOCK_ONLY
+    assert P.display_message("Mon 26 Oct 2026") == P.DISPLAY_CLOCK_ONLY
+
+
 def test_panel_identification():
     ident = P.decode_panel_identification(b"Elite 24     V6.05.03LS1".ljust(32, b"\0"))
     assert (ident.model, ident.zones, ident.firmware) == ("Premier Elite", 24, "V6.05.03LS1")
