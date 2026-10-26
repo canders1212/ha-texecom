@@ -3,8 +3,9 @@ blueprint:
   description: >-
     Sends a notification to your phone (and, if you like, to Telegram or any
     other notifier) when the alarm goes off (naming the zone that set it off)
-    and when it couldn't arm, and if you like when the panel loses or gets
-    back its mains power, or a tamper opens.
+    and when it couldn't arm, and if you like when the panel has been on
+    battery for 2 minutes (and when its mains power is back), or a tamper
+    opens.
   domain: automation
   author: metaljay
   source_url: https://github.com/metaljay/ha-texecom/blob/main/blueprints/automation/texecom/alarm_alerts.yaml
@@ -58,7 +59,7 @@ blueprint:
       selector:
         boolean: {}
 
-mode: queued
+mode: parallel
 
 variables:
   alarm: !input alarm
@@ -93,11 +94,6 @@ triggers:
   - trigger: event
     event_type: texecom_event
     event_data:
-      type: fault_cleared
-    id: mains_on
-  - trigger: event
-    event_type: texecom_event
-    event_data:
       type: tamper
     id: tamper
 
@@ -110,7 +106,7 @@ conditions:
       {{ mine and (
            (trigger.id == 'went_off' and went_off)
            or (trigger.id == 'not_set' and not_set)
-           or (trigger.id in ['mains_off', 'mains_on'] and mains and is_mains)
+           or (trigger.id == 'mains_off' and mains and is_mains)
            or (trigger.id == 'tamper' and tamper)
          ) }}
 
@@ -122,37 +118,72 @@ actions:
       # The zone that set it off follows the alarm by a moment.
       - delay:
           seconds: 3
-  - variables:
-      title: "{{ titles[trigger.id] }}"
-      message: >-
-        {% if trigger.id == 'went_off' %}
-          {% set by = state_attr(alarm, 'changed_by') %}
-          {{ state_attr(alarm, 'friendly_name') }} is going off{{ ': set off by ' ~ by if by else '' }}.
-        {% elif trigger.id == 'not_set' %}
-          {{ trigger.event.data.zone_name or 'A zone' }} was still active when the exit time ended, so the alarm didn't arm.
-        {% elif trigger.id == 'mains_off' %}
-          The alarm panel has lost its mains power and is running on its battery.
-        {% elif trigger.id == 'mains_on' %}
-          The alarm panel has its mains power back.
-        {% else %}
-          The alarm panel reports a tamper: {{ trigger.event.data.source }}.
-        {% endif %}
   - if:
-      - condition: template
-        value_template: "{{ notify_device | length > 0 }}"
+      - condition: trigger
+        id: mains_off
     then:
-      - domain: mobile_app
-        type: notify
-        device_id: !input notify_device
-        title: "{{ title }}"
-        message: "{{ message }}"
-  - if:
-      - condition: template
-        value_template: "{{ notify_entities | length > 0 }}"
-    then:
-      - action: notify.send_message
-        target:
-          entity_id: "{{ notify_entities }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
+      # A short power blip isn't worth an alert: give the mains 2 minutes to come back.
+      - wait_for_trigger:
+          - trigger: event
+            event_type: texecom_event
+            event_data:
+              type: fault_cleared
+              entry_id: "{{ trigger.event.data.entry_id }}"
+              source: "{{ trigger.event.data.source }}"
+        timeout: "00:02:00"
+      - if:
+          - condition: template
+            value_template: "{{ wait.trigger is not none }}"
+        then:
+          - stop: The mains came back within 2 minutes
+  # One alert; for the mains, "on battery" now and "mains back" once it is.
+  - repeat:
+      for_each: "{{ ['mains_off', 'mains_on'] if trigger.id == 'mains_off' else [trigger.id] }}"
+      sequence:
+        - variables:
+            kind: "{{ repeat.item }}"
+        - if:
+            - condition: template
+              value_template: "{{ kind == 'mains_on' }}"
+          then:
+            - wait_for_trigger:
+                - trigger: event
+                  event_type: texecom_event
+                  event_data:
+                    type: fault_cleared
+                    entry_id: "{{ trigger.event.data.entry_id }}"
+                    source: "{{ trigger.event.data.source }}"
+        - variables:
+            title: "{{ titles[kind] }}"
+            message: >-
+              {% if kind == 'went_off' %}
+                {% set by = state_attr(alarm, 'changed_by') %}
+                {{ state_attr(alarm, 'friendly_name') }} is going off{{ ': set off by ' ~ by if by else '' }}.
+              {% elif kind == 'not_set' %}
+                {{ trigger.event.data.zone_name or 'A zone' }} was still active when the exit time ended, so the alarm didn't arm.
+              {% elif kind == 'mains_off' %}
+                The alarm panel has had no mains power for 2 minutes and is running on its battery.
+              {% elif kind == 'mains_on' %}
+                The alarm panel has its mains power back.
+              {% else %}
+                The alarm panel reports a tamper: {{ trigger.event.data.source }}.
+              {% endif %}
+        - if:
+            - condition: template
+              value_template: "{{ notify_device | length > 0 }}"
+          then:
+            - domain: mobile_app
+              type: notify
+              device_id: !input notify_device
+              title: "{{ title }}"
+              message: "{{ message }}"
+        - if:
+            - condition: template
+              value_template: "{{ notify_entities | length > 0 }}"
+          then:
+            - action: notify.send_message
+              target:
+                entity_id: "{{ notify_entities }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"

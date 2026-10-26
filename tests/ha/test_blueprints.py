@@ -18,11 +18,11 @@ from pytest_homeassistant_custom_component.common import (
 from .common import ALARM, setup_connect, state, wait_for
 
 BLUEPRINTS = Path(__file__).resolve().parents[2] / "blueprints" / "automation" / "texecom"
-PHONE_ACTION = """      - domain: mobile_app
-        type: notify
-        device_id: !input notify_device
-        title: "{{ title }}"
-        message: "{{ message }}"
+PHONE_ACTION = """            - domain: mobile_app
+              type: notify
+              device_id: !input notify_device
+              title: "{{ title }}"
+              message: "{{ message }}"
 """
 
 
@@ -40,6 +40,11 @@ async def use(hass, name: str, **inputs) -> None:
     )
     await hass.async_block_till_done()
     assert hass.states.async_all("automation"), "the automation didn't load"
+
+
+def running(hass) -> int:
+    """How many runs of the (only) automation are under way."""
+    return hass.states.async_all("automation")[0].attributes.get("current", 0)
 
 
 async def later(hass, **delta) -> None:
@@ -105,11 +110,11 @@ def alerts_for_test() -> str:
     return text.replace(
         PHONE_ACTION,
         PHONE_ACTION.replace(
-            "- domain: mobile_app\n        type: notify\n        device_id",
-            "- event: texecom_test_phone\n        event_data:\n          device",
+            "- domain: mobile_app\n              type: notify\n              device_id",
+            "- event: texecom_test_phone\n              event_data:\n                device",
         )
-        .replace("        title", "          title")
-        .replace("        message", "          message"),
+        .replace("              title", "                title")
+        .replace("              message", "                message"),
     )
 
 
@@ -129,6 +134,9 @@ async def test_alerts(hass, fake, tmp_path):
     fake.on_battery = True
     await entry.runtime_data.read_power()
     await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
+    await wait_for(lambda: running(hass) == 1)  # waiting: a short power blip isn't worth an alert
+    assert len(sent) == 1
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=3))
     await wait_for(lambda: len(sent) == 2)
     assert sent[1].data["title"] == "Alarm panel on battery"
     fake.on_battery = False
@@ -150,6 +158,25 @@ async def test_alerts(hass, fake, tmp_path):
     assert sent[4].data["title"] == "🚨 Alarm!"
     assert sent[4].data["message"].strip() == "House Alarm is going off: set off by Kitchen."
     assert sent[4].data["device"] == "phone"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_a_short_power_blip_sends_nothing(hass, fake, tmp_path):
+    install(hass, tmp_path, "alarm_alerts.yaml", alerts_for_test())
+    entry = await setup_connect(hass, fake)
+    sent = async_capture_events(hass, "texecom_test_phone")
+    await use(hass, "alarm_alerts.yaml", alarm=ALARM, notify_device="phone")
+    fake.on_battery = True
+    await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()
+    await wait_for(lambda: running(hass) == 1)
+    fake.on_battery = False  # back within a minute (#51's log: 33 seconds)
+    await entry.runtime_data.read_power()
+    await wait_for(lambda: running(hass) == 0)
+    await later(hass, minutes=3)
+    assert sent == []
+    fake.send_log(85, 0, 4)  # other alerts still come
+    await wait_for(lambda: len(sent) == 1)
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 

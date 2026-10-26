@@ -78,7 +78,7 @@ Your phone (and anything under **Also send to**) then gets a notification:
 |---|---|
 | The alarm goes off | **🚨 Alarm!** *House Alarm is going off: set off by Kitchen.* |
 | The alarm couldn't arm | **Alarm not set** *Front Door was still active when the exit time ended, so the alarm didn't arm.* |
-| The panel loses its mains power, and gets it back | **Alarm panel on battery** · **Alarm panel mains back** |
+| The panel has had no mains power for 2 minutes, and when it gets it back (a shorter blip sends nothing) | **Alarm panel on battery** · **Alarm panel mains back** |
 | A tamper opens | **Alarm tamper** *The alarm panel reports a tamper: Panel Box Tamper.* |
 
 All four work with **Texecom Connect** (a SmartCom or ComIP). With [Crestron](crestron.md) only *the alarm goes off* works, and it can't name the zone.
