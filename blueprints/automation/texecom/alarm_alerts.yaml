@@ -1,9 +1,10 @@
 blueprint:
   name: "Texecom: tell me about the alarm"
   description: >-
-    Sends a notification to your phone when the alarm goes off (naming the
-    zone that set it off) and when it couldn't arm, and if you like when the
-    panel loses or gets back its mains power, or a tamper opens.
+    Sends a notification to your phone (and, if you like, to Telegram or any
+    other notifier) when the alarm goes off (naming the zone that set it off)
+    and when it couldn't arm, and if you like when the panel loses or gets
+    back its mains power, or a tamper opens.
   domain: automation
   author: metaljay
   source_url: https://github.com/metaljay/ha-texecom/blob/main/blueprints/automation/texecom/alarm_alerts.yaml
@@ -19,11 +20,23 @@ blueprint:
               domain: alarm_control_panel
     notify_device:
       name: Phone
-      description: The phone to tell. It needs the Home Assistant app.
+      description: The phone to tell. It needs the Home Assistant app. Leave it empty to use only "Also send to".
+      default: ""
       selector:
         device:
           filter:
             - integration: mobile_app
+    notify_entities:
+      name: Also send to
+      description: >-
+        Other notifiers to tell as well, such as a Telegram chat (set up the
+        Telegram bot integration first) or an email. Optional.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain: notify
     went_off:
       name: When the alarm goes off
       default: true
@@ -49,6 +62,8 @@ mode: queued
 
 variables:
   alarm: !input alarm
+  notify_device: !input notify_device
+  notify_entities: !input notify_entities
   went_off: !input went_off
   not_set: !input not_set
   mains: !input mains
@@ -107,20 +122,37 @@ actions:
       # The zone that set it off follows the alarm by a moment.
       - delay:
           seconds: 3
-  - domain: mobile_app
-    type: notify
-    device_id: !input notify_device
-    title: "{{ titles[trigger.id] }}"
-    message: >-
-      {% if trigger.id == 'went_off' %}
-        {% set by = state_attr(alarm, 'changed_by') %}
-        {{ state_attr(alarm, 'friendly_name') }} is going off{{ ': set off by ' ~ by if by else '' }}.
-      {% elif trigger.id == 'not_set' %}
-        {{ trigger.event.data.zone_name or 'A zone' }} was still active when the exit time ended, so the alarm didn't arm.
-      {% elif trigger.id == 'mains_off' %}
-        The alarm panel has lost its mains power and is running on its battery.
-      {% elif trigger.id == 'mains_on' %}
-        The alarm panel has its mains power back.
-      {% else %}
-        The alarm panel reports a tamper: {{ trigger.event.data.source }}.
-      {% endif %}
+  - variables:
+      title: "{{ titles[trigger.id] }}"
+      message: >-
+        {% if trigger.id == 'went_off' %}
+          {% set by = state_attr(alarm, 'changed_by') %}
+          {{ state_attr(alarm, 'friendly_name') }} is going off{{ ': set off by ' ~ by if by else '' }}.
+        {% elif trigger.id == 'not_set' %}
+          {{ trigger.event.data.zone_name or 'A zone' }} was still active when the exit time ended, so the alarm didn't arm.
+        {% elif trigger.id == 'mains_off' %}
+          The alarm panel has lost its mains power and is running on its battery.
+        {% elif trigger.id == 'mains_on' %}
+          The alarm panel has its mains power back.
+        {% else %}
+          The alarm panel reports a tamper: {{ trigger.event.data.source }}.
+        {% endif %}
+  - if:
+      - condition: template
+        value_template: "{{ notify_device | length > 0 }}"
+    then:
+      - domain: mobile_app
+        type: notify
+        device_id: !input notify_device
+        title: "{{ title }}"
+        message: "{{ message }}"
+  - if:
+      - condition: template
+        value_template: "{{ notify_entities | length > 0 }}"
+    then:
+      - action: notify.send_message
+        target:
+          entity_id: "{{ notify_entities }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"

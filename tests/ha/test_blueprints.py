@@ -9,12 +9,21 @@ from pathlib import Path
 
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_capture_events, async_fire_time_changed
+from pytest_homeassistant_custom_component.common import (
+    async_capture_events,
+    async_fire_time_changed,
+    async_mock_service,
+)
 
 from .common import ALARM, setup_connect, state, wait_for
 
 BLUEPRINTS = Path(__file__).resolve().parents[2] / "blueprints" / "automation" / "texecom"
-PHONE_ACTION = "  - domain: mobile_app\n    type: notify\n    device_id: !input notify_device\n"
+PHONE_ACTION = """      - domain: mobile_app
+        type: notify
+        device_id: !input notify_device
+        title: "{{ title }}"
+        message: "{{ message }}"
+"""
 
 
 def install(hass, tmp_path, name: str, text: str | None = None) -> None:
@@ -92,9 +101,16 @@ def alerts_for_test() -> str:
     """The alerts blueprint with its phone action swapped for an event the
     test can see (the phone action itself is Home Assistant's own)."""
     text = (BLUEPRINTS / "alarm_alerts.yaml").read_text()
-    head, tail = text.split(PHONE_ACTION)
-    tail = "".join("  " + line if line.strip() else line for line in tail.splitlines(keepends=True))
-    return head + "  - event: texecom_test_phone\n    event_data:\n      device: !input notify_device\n" + tail
+    assert PHONE_ACTION in text
+    return text.replace(
+        PHONE_ACTION,
+        PHONE_ACTION.replace(
+            "- domain: mobile_app\n        type: notify\n        device_id",
+            "- event: texecom_test_phone\n        event_data:\n          device",
+        )
+        .replace("        title", "          title")
+        .replace("        message", "          message"),
+    )
 
 
 async def test_alerts(hass, fake, tmp_path):
@@ -147,6 +163,25 @@ async def test_alerts_only_for_this_panel_and_as_chosen(hass, fake, tmp_path):
     await wait_for(lambda: hass.states.get("binary_sensor.texecom_tamper").state == "on")
     await hass.async_block_till_done()
     assert sent == []
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_alerts_also_to_other_notifiers(hass, fake, tmp_path):
+    """No phone, just a Telegram chat (#49): it gets the same title and message."""
+    install(hass, tmp_path, "alarm_alerts.yaml", alerts_for_test())
+    entry = await setup_connect(hass, fake)
+    phone = async_capture_events(hass, "texecom_test_phone")
+    sent = async_mock_service(hass, "notify", "send_message")
+    await use(hass, "alarm_alerts.yaml", alarm=ALARM, notify_entities=["notify.telegram_family"])
+
+    fake.send_log(85, 0, 4)
+    await wait_for(lambda: len(sent) == 1)
+    assert sent[0].data["entity_id"] == ["notify.telegram_family"]
+    assert sent[0].data["title"] == "Alarm not set"
+    assert sent[0].data["message"].strip() == (
+        "Kitchen was still active when the exit time ended, so the alarm didn't arm."
+    )
+    assert phone == []
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 

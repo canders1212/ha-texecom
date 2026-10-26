@@ -70,7 +70,9 @@ The same idea, but your phone asks first: when nobody has been home for a few mi
 2. Go to **Settings → Automations & scenes → Blueprints**, and click **Texecom: tell me about the alarm**.
 3. Choose your **Alarm** and your **Phone** (it needs the Home Assistant app), untick anything you don't want to hear about, and **Save** it.
 
-Your phone then gets a notification:
+To be told somewhere else too, such as a Telegram chat or an email, choose it under **Also send to** (set up that service in Home Assistant first, for example the Telegram bot integration). You can leave **Phone** empty and use only **Also send to**.
+
+Your phone (and anything under **Also send to**) then gets a notification:
 
 | When | It says |
 |---|---|
