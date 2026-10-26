@@ -23,9 +23,10 @@ ZONE_TYPE_GAS = 11
 ZONE_TYPES_PANIC = (7, 8, 20, 21)
 ZONE_TYPE_TAMPER = 13
 
-_OPENING = re.compile(r"\b(door|gate|shutter|patio|contact)\b", re.IGNORECASE)
+_OPENING = re.compile(r"\b(door|gate|shutter|patio|contact|safe)\b", re.IGNORECASE)
 _WINDOW = re.compile(r"\b(window|windows)\b", re.IGNORECASE)
 _GARAGE_DOOR = re.compile(r"\bgarage door\b", re.IGNORECASE)
+_TAMPER = re.compile(r"\b(tamper|bell|sounder|siren|keypad)\b", re.IGNORECASE)  # tamper loops
 _SHOCK = re.compile(r"\b(shock|vibration)\b", re.IGNORECASE)
 
 
@@ -42,6 +43,8 @@ def guess_device_class(name: str, panel_type: int | None) -> BinarySensorDeviceC
     if panel_type in ZONE_TYPES_PANIC:
         return BinarySensorDeviceClass.SAFETY
     if panel_type == ZONE_TYPE_TAMPER:
+        return BinarySensorDeviceClass.TAMPER
+    if _TAMPER.search(name):
         return BinarySensorDeviceClass.TAMPER
     if _GARAGE_DOOR.search(name):
         return BinarySensorDeviceClass.GARAGE_DOOR

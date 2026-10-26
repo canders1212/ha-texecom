@@ -16,7 +16,13 @@ from custom_components.texecom.binary_sensor import guess_device_class
         ("Garage Door", C.GARAGE_DOOR),
         ("Bedroom Window", C.WINDOW),
         ("WindowContact", C.WINDOW),
-        ("Indoor Siren", C.MOTION),
+        ("Indoor PIR", C.MOTION),
+        ("Safe", C.DOOR),  # a safe's door contact (#50)
+        ("Bell", C.TAMPER),  # the external sounder's tamper loop (#50)
+        ("External Sounder", C.TAMPER),
+        ("Indoor Siren", C.TAMPER),
+        ("Keypad", C.TAMPER),
+        ("Lid Tamper", C.TAMPER),
         ("Outdoor PIR", C.MOTION),
         ("Hallway", C.MOTION),
     ],
