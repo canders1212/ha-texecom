@@ -219,7 +219,7 @@
         "title": "Notifications",
         "description": "Home Assistant can show a notification while something needs attention. It goes by itself once it's put right.",
         "data": {
-          "notify_mains": "When the panel loses mains power",
+          "notify_mains": "When the panel has been on battery for 2 minutes",
           "notify_tamper": "When a tamper opens (the panel's lid, a detector's cover, the bell box…)"
         }
       },

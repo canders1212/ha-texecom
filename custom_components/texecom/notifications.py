@@ -2,9 +2,10 @@
 
 - "Alarm not set": the panel didn't arm because zones were active when the
   exit time ended. It names the zones, and goes once that area is armed.
-- "Alarm panel on battery" while the panel has no mains power, and "Alarm
-  tamper" while a tamper is open, the panel's own or a zone's (each can be
-  turned off in Options). They follow the Mains power and Tamper sensors."""
+- "Alarm panel on battery" once the panel has had no mains power for two
+  minutes (so a short blip shows nothing), and "Alarm tamper" while a tamper
+  is open, the panel's own or a zone's (each can be turned off in Options).
+  They follow the Mains power and Tamper sensors."""
 
 from __future__ import annotations
 
@@ -14,12 +15,14 @@ from typing import Any
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 
 from .const import CONF_NOTIFY_MAINS, CONF_NOTIFY_TAMPER, DOMAIN, EVENT
 from .panel import MAINS_FAULTS, TexecomPanel, nice_name
 
 ARM_FAILED_WINDOW = 60.0  # zones reported within this of each other are one failed arm
+MAINS_NOTICE_AFTER = 120.0  # seconds on battery before the notice: power blips come and go sooner
 
 MAINS_MESSAGE = (
     "The alarm panel has lost its mains power and is running on its battery. The alarm still works "
@@ -117,6 +120,7 @@ def watch_conditions(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
     """Shows "Alarm panel on battery" and "Alarm tamper" while those last.
     Returns the function that stops watching (and removes them)."""
     shown: dict[str, str] = {}  # kind -> the message showing
+    mains_timer: CALLBACK_TYPE | None = None  # waiting to show the battery notice
 
     def show(kind: str, title: str, message: str | None) -> None:
         notification_id = f"{DOMAIN}_{kind}_{entry.entry_id}"
@@ -128,13 +132,30 @@ def watch_conditions(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
             persistent_notification.async_create(hass, message, title=title, notification_id=notification_id)
 
     @callback
+    def still_on_battery(_now=None) -> None:
+        nonlocal mains_timer
+        mains_timer = None
+        show("mains", "Alarm panel on battery", MAINS_MESSAGE)
+
+    def cancel_mains_timer() -> None:
+        nonlocal mains_timer
+        if mains_timer:
+            mains_timer()
+            mains_timer = None
+
+    @callback
     def check() -> None:
+        nonlocal mains_timer
         faults = panel.extra.get("faults", set())
         # Only once the power has been read since connecting, so a reconnect
         # doesn't remove the notice and bring it back half a minute later.
         if "power" in panel.extra or faults & MAINS_FAULTS:
             on_battery = bool(faults & MAINS_FAULTS) and entry.options.get(CONF_NOTIFY_MAINS, True)
-            show("mains", "Alarm panel on battery", MAINS_MESSAGE if on_battery else None)
+            if not on_battery:
+                cancel_mains_timer()
+                show("mains", "", None)
+            elif "mains" not in shown and mains_timer is None:
+                mains_timer = async_call_later(hass, MAINS_NOTICE_AFTER, still_on_battery)
         tampers: list[str] = []
         if entry.options.get(CONF_NOTIFY_TAMPER, True):
             tampers = [
@@ -152,6 +173,7 @@ def watch_conditions(hass: HomeAssistant, entry: ConfigEntry, panel: TexecomPane
 
     def remove() -> None:
         remove_listener()
+        cancel_mains_timer()
         for kind in list(shown):
             show(kind, "", None)
 

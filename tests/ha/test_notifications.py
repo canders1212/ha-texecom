@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from homeassistant.components import persistent_notification
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from .common import setup_connect, wait_for
 
@@ -38,6 +42,8 @@ async def test_mains_notice_while_on_battery(hass, fake):
     await entry.runtime_data.read_power()
     await entry.runtime_data.read_power()  # two readings in a row: one can be a blip
     await hass.async_block_till_done()
+    assert _notice(hass, "mains", entry) is None  # not yet: short power blips aren't worth a notice
+    await _minutes_pass(hass, 3)
     note = _notice(hass, "mains", entry)
     assert note is not None and note["title"] == "Alarm panel on battery"
     await entry.runtime_data.read_power()  # still on battery: the same notice, not a new one
@@ -46,6 +52,27 @@ async def test_mains_notice_while_on_battery(hass, fake):
     await hass.async_block_till_done()
     assert _notice(hass, "mains", entry) is None  # gone once the mains is back
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_a_short_power_blip_shows_no_notice(hass, fake):
+    entry = await setup_connect(hass, fake)
+    fake.on_battery = True
+    await entry.runtime_data.read_power()
+    await entry.runtime_data.read_power()
+    await hass.async_block_till_done()
+    assert hass.states.get("binary_sensor.texecom_mains_power").state == "off"  # the sensor still says so at once
+    assert _notice(hass, "mains", entry) is None
+    fake.on_battery = False  # back within a minute (#51's log: 33 seconds)
+    await entry.runtime_data.read_power()
+    await hass.async_block_till_done()
+    await _minutes_pass(hass, 3)
+    assert _notice(hass, "mains", entry) is None
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def _minutes_pass(hass, minutes: int) -> None:
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=minutes))
+    await hass.async_block_till_done()
 
 
 async def test_tamper_notice_says_what_to_check(hass, fake):

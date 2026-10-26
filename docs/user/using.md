@@ -60,7 +60,7 @@ Open **Settings → Devices & services → Texecom**, then the **⚙️ cog** on
 | **Arm buttons** | The part arm behind Night, Home, Vacation and Custom bypass. *'Not used'* hides the button. *Reconnects to the panel* |
 | **Home Assistant alarm code** | Optional. Home Assistant asks for it before disarming (and, if you tick the box, before arming). It's checked by Home Assistant, not the panel, and has nothing to do with your keypad codes. **It stops Apple Home and some automations working**: see [what a code affects](#what-a-home-assistant-alarm-code-affects) first |
 | **Names for keypad users** | One per line, like `3 = Sam`: the alarm then says *changed by Sam* instead of *User 3*, here and in the activity list. With a SmartCom or ComIP, they start as the names your installer stored in the panel: Home Assistant fills them in the first time it connects (the engineer code, user 0, as *Engineer*), unless you've already given names. After your installer changes them, tick *Fill in the names stored in the panel* to read them again. The panel sends each user's code with the name; Home Assistant drops the codes at once, without keeping or logging them |
-| **Notifications** | Whether Home Assistant shows a notification while the panel has no mains power, or while a tamper is open (both on to start with) |
+| **Notifications** | Whether Home Assistant shows a notification while the panel is on battery (after 2 minutes), or while a tamper is open (both on to start with) |
 | **Panel clock** | **Keep the panel clock right** (on to start with): once a day (and on connecting), sets the panel's clock if it's more than a minute out, in Home Assistant's time zone (so British Summer Time is handled). A clock that's already right (the Texecom Cloud can keep it right too) is left alone. *Reconnects to the panel* |
 | **Read zones and areas from the panel again** | After your installer adds, renames or moves zones. Over Texecom Connect it happens by itself when engineer programming at a keypad ends, or a few seconds after Wintex saves a page; after a full send from Wintex, use this option (once Wintex has disconnected) |
 | **Create or refresh the Alarm dashboard** | Builds the dashboard again from the current zones (it asks first, because any changes you made to it are replaced) |
@@ -77,7 +77,7 @@ Besides the **Alarm not set** notification (the alarm couldn't arm because a zon
 
 | Notification | While | Goes when |
 |---|---|---|
-| **Alarm panel on battery** | The panel has lost its mains power | The mains is back |
+| **Alarm panel on battery** | The panel has had no mains power for 2 minutes (a shorter blip shows nothing; **Mains power** still turns off at once) | The mains is back |
 | **Alarm tamper** | A tamper is open, with what to check (e.g. *the panel's lid is open*, *a detector's cover is open*, or the zone, for a detector that reports its own tamper), or the panel has set off its internal sounders without saying why (*Internal Alarm*) | It's closed again (*Internal Alarm*: a code has been entered at the keypad) |
 
 <img src="../images/notifications.png" width="420" alt="Home Assistant's notifications: Alarm not set (Kitchen was active when the exit time ended), Alarm panel on battery, and Alarm tamper (the panel's lid is open)">
