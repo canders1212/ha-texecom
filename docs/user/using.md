@@ -96,6 +96,8 @@ The alarm's activity (on its page, in the **Logbook**, and on the Alarm dashboar
 
 With [Crestron](crestron.md) you see the keypad users; the rest needs **Texecom Connect**.
 
+Each area's alarm is its own device (for example *House Alarm*), separate from the panel's device. So the panel device's **Activity** shows only the panel's own sensors, such as *Keypad display*: for arming, disarming and the lines above, open the alarm's device, or add it to the Activity page's **Sources** to see both in one list.
+
 ## Codes
 
 - **The UDL code** lets Home Assistant talk to the panel. It's stored in Home Assistant like any integration's password. Anyone with admin access to your Home Assistant can arm and disarm, so keep that access tight.
